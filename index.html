@@ -216,7 +216,11 @@ button { font: inherit; }
 .map-legend .ramp i { width: 22px; height: 10px; border-radius: 3px; display: block; }
 .ring-legend { display: flex; align-items: center; gap: 5px; margin-top: 8px; color: var(--text-2); font-size: 11px; }
 .ring-demo { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--dep) 0 50%, var(--arr) 50% 100%); }
-.map-legend .heatbar { height: 10px; border-radius: 3px; width: 142px; }
+.map-legend .heatbar { height: 10px; border-radius: 3px; width: 160px; }
+.map-legend .ticks.abs { position: relative; height: 13px; width: 160px; display: block; }
+.map-legend .ticks.abs span { position: absolute; transform: translateX(-50%); }
+.map-legend .ticks.abs span:first-child { transform: none; }
+.map-legend .ticks.abs span:last-child { transform: translateX(-100%); }
 .map-legend .ticks { display: flex; justify-content: space-between; color: var(--text-3); font-size: 10px; margin-top: 3px; }
 #tip {
   position: fixed; z-index: 2000; pointer-events: none; display: none;
@@ -370,7 +374,6 @@ const SEQ = [
 // Zielony = mały ruch, czerwony = największy (w obu motywach).
 // Liczby na plakietkach są drugim nośnikiem informacji dla osób nierozróżniających zieleni i czerwieni.
 const BADGE_STOPS = ["#22c55e", "#a3e635", "#facc15", "#fb923c", "#ef4444", "#b91c1c"];
-const badgeStops = () => BADGE_STOPS;
 // Tekst na plakietce: ciemny na jasnym tle, biały na ciemnym (wg jasności koloru).
 function inkFor(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -414,16 +417,33 @@ function localParts(ts) {
 }
 const inWindow = (h) => state.from <= state.to ? h >= state.from && h <= state.to : h >= state.from || h <= state.to;
 
-// Heatmapa: ta sama skala, od zielonego (mało) do czerwonego (dużo).
+// Wspólna, BEZWZGLĘDNA skala dla heatmapy i plakietek: liczba lotów -> t (0..1) w skali logarytmicznej,
+// 250+ lotów = 1. Dzięki temu 20 lotów ma zawsze ten sam kolor, niezależnie od wybranych godzin
+// (wcześniej heatmapa normalizowała do bieżącego maksimum i 20 lotów w nocy świeciło na czerwono).
+const SCALE_MAX = 250;
+const tOf = (n) => (n <= 0 ? 0 : Math.min(1, Math.log1p(n) / Math.log1p(SCALE_MAX)));
+const STOP_POS = SEQ.map((s) => tOf(s.min)); // pozycje kolorów na skali: 1, 10, 25, 50, 100, 250
+
 function heatGradient() {
-  const s = badgeStops(); // ta sama skala co plakietki lotnisk
-  return { 0.1: s[0], 0.3: s[1], 0.5: s[2], 0.7: s[3], 0.85: s[4], 1: s[5] };
+  return Object.fromEntries(STOP_POS.map((p, i) => [p.toFixed(3), BADGE_STOPS[i]]));
+}
+
+// Kolor w punkcie t skali (interpolacja między sąsiednimi kolorami, tak jak robi heatmapa).
+function colorAt(t) {
+  if (t <= STOP_POS[0]) return BADGE_STOPS[0];
+  for (let i = 1; i < STOP_POS.length; i++) {
+    if (t <= STOP_POS[i]) {
+      const f = (t - STOP_POS[i - 1]) / (STOP_POS[i] - STOP_POS[i - 1]);
+      const a = BADGE_STOPS[i - 1], b = BADGE_STOPS[i];
+      const ch = (hex, k) => parseInt(hex.slice(1 + 2 * k, 3 + 2 * k), 16);
+      return "#" + [0, 1, 2].map((k) => Math.round(ch(a, k) + (ch(b, k) - ch(a, k)) * f).toString(16).padStart(2, "0")).join("");
+    }
+  }
+  return BADGE_STOPS[BADGE_STOPS.length - 1];
 }
 
 function seqColor(total) {
-  if (!total) return css("--zero");
-  const level = SEQ.reduce((i, s, k) => (total >= s.min ? k : i), 0);
-  return badgeStops()[level];
+  return total ? colorAt(tOf(total)) : css("--zero");
 }
 
 function airportLabel(icao, short = false) {
@@ -571,12 +591,12 @@ function setupHistogram() {
 
 function renderMap(list, counts) {
   const dark = isDark();
-  // Heatmapa (pierwiastek z liczby lotów, żeby małe lotniska były widoczne obok WAW).
+  // Heatmapa: waga punktu = pozycja na wspólnej skali, więc środek plamy ma kolor plakietki.
   const max = Math.max(1, ...Object.values(counts).map((c) => c.total));
   if (map.getSize().x > 0) {
-    heatLayer.setOptions({ max: Math.sqrt(max), gradient: heatGradient() });
+    heatLayer.setOptions({ max: 1, gradient: heatGradient() });
     heatLayer.setLatLngs(Object.entries(counts).filter(([, c]) => c.total > 0)
-      .map(([icao, c]) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon, Math.sqrt(c.total)]));
+      .map(([icao, c]) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon, tOf(c.total)]));
   }
 
   renderRoutes(list, dark); // trasy przed lotniskami, żeby kółka były na wierzchu
@@ -810,7 +830,7 @@ async function init() {
   map.fitBounds(Object.values(AIRPORTS).map((a) => [a.lat, a.lon]), { padding: [40, 40] });
   applyTiles();
 
-  heatLayer = L.heatLayer ? L.heatLayer([], { radius: 55, blur: 38, minOpacity: 0.4, maxZoom: 0 /* pełna intensywność przy każdym przybliżeniu */, gradient: heatGradient() }) : L.layerGroup();
+  heatLayer = L.heatLayer ? L.heatLayer([], { radius: 55, blur: 38, minOpacity: 0.05, maxZoom: 0 /* pełna intensywność przy każdym przybliżeniu */, gradient: heatGradient() }) : L.layerGroup();
   if (!heatLayer.setLatLngs) { heatLayer.setLatLngs = () => {}; heatLayer.setOptions = () => {}; }
   routeLayer = L.layerGroup();
   circleLayer = L.layerGroup();
@@ -822,8 +842,8 @@ async function init() {
     const div = L.DomUtil.create("div", "map-legend");
     // Jedna skala dla heatmapy i plakietek: kolor = natężenie ruchu.
     div.innerHTML = `<h4>Loty na lotnisku</h4>
-      <div class="ramp">${badgeStops().map((c) => `<i style="background:${c}"></i>`).join("")}</div>
-      <div class="ticks">${SEQ.filter((_, i) => i % 2 === 0 || i === SEQ.length - 1).map((s) => `<span>${s.label}</span>`).join("")}</div>
+      <div class="heatbar" style="background:linear-gradient(90deg,${BADGE_STOPS.map((c, i) => `${c} ${(STOP_POS[i] * 100).toFixed(1)}%`).join(",")})"></div>
+      <div class="ticks abs">${SEQ.filter((s) => [1, 10, 50, 250].includes(s.min)).map((s) => `<span style="left:${(tOf(s.min) * 100).toFixed(1)}%">${s.label}</span>`).join("")}</div>
       <div class="ring-legend"><span class="ring-demo"></span>pierścień: <i class="dot dep"></i>odloty <i class="dot arr"></i>przyloty</div>`;
     return div;
   };
