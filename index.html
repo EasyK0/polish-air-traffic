@@ -4,14 +4,18 @@
 <meta charset="UTF-8" />
 <title>Mapa lotów w Polsce · Polish Air Traffic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- Polityka bezpieczeństwa: skrypty i style tylko z tej strony i cdnjs, dane tylko z tej strony,
+     kafelki mapy tylko z Esri. Blokuje wysyłanie czegokolwiek na inne serwery. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://server.arcgisonline.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
 <meta name="description" content="Interaktywna mapa ruchu lotniczego na polskich lotniskach: heatmapa, trasy i rozkład godzinowy." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js" integrity="sha384-mFKkGiGvT5vo1fEyGCD3hshDdKmW3wzXW/x+fWriYJArD0R3gawT6lMvLboM22c0" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <style>
 /* ---------- tokeny ---------- */
@@ -479,7 +483,7 @@ function applyStatic() {
 function fillDaySelect() {
   const sel = $("daySelect");
   const cur = sel.value;
-  sel.innerHTML = state.days.map((d) => `<option value="${esc(d.date)}">${esc(dayName(d.date))} · ${fmt(d.rows)} ${t("flightsWord")}</option>`).join("");
+  sel.innerHTML = state.days.map((d) => `<option value="${esc(d.date)}">${esc(dayName(d.date))} · ${fmt(Number(d.rows) || 0)} ${t("flightsWord")}</option>`).join("");
   if (cur && state.days.some((d) => d.date === cur)) sel.value = cur;
 }
 

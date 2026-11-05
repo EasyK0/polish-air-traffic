@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -43,7 +43,11 @@ jobs:
             echo "::error::Brak sekretów OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET"; exit 1
           fi
           ARGS="--source=opensky --keep=60"
-          if [ -n "$INPUT_DATE" ]; then ARGS="$ARGS --date=$INPUT_DATE"; fi
+          if [ -n "$INPUT_DATE" ]; then
+            # tylko format daty, nic innego nie trafi do polecenia
+            echo "$INPUT_DATE" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' || { echo "::error::Zła data"; exit 1; }
+            ARGS="$ARGS --date=$INPUT_DATE"
+          fi
           # kod 2 = zapisano dzień, ale części danych brakuje: commitujemy mimo to
           set +e; node export.mjs $ARGS; code=$?; set -e
           if [ "$code" = "2" ]; then echo "::warning::Eksport niepełny, szczegóły w logu"; elif [ "$code" != "0" ]; then exit $code; fi
