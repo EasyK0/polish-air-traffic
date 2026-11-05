@@ -2,7 +2,7 @@
 
 Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężenia ruchu, trasy do lotnisk docelowych, rozkład godzinowy i ranking lotnisk. Dane pochodzą z [OpenSky Network](https://opensky-network.org) i są pobierane skryptem Node.js.
 
-**[▶ Zobacz demo](https://easyk0.github.io/mapa-lotow/)**
+**[▶ Zobacz demo](https://easyk0.github.io/polish-air-traffic/)**
 
 ![Mapa lotów - jasny motyw](docs/screenshot.png)
 
