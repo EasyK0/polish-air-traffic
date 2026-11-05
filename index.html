@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8" />
-<title>Mapa lotów w Polsce</title>
+<title>Mapa lotów w Polsce · Polish Air Traffic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="description" content="Interaktywna mapa ruchu lotniczego na polskich lotniskach: heatmapa, trasy i rozkład godzinowy." />
 
@@ -84,6 +84,8 @@ body {
   background: var(--surface); color: var(--text-2); cursor: pointer; display: grid; place-items: center;
 }
 .icon-btn:hover { background: var(--surface-2); }
+.lang-btn { font-size: 12px; font-weight: 700; letter-spacing: .03em; }
+.brand { gap: 8px; }
 
 /* ---------- formularz ---------- */
 .section-title {
@@ -245,25 +247,26 @@ button { font: inherit; }
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
     </div>
     <div>
-      <h1>Mapa lotów w Polsce</h1>
-      <p>15 lotnisk · czas polski</p>
+      <h1 data-i18n="title">Mapa lotów w Polsce</h1>
+      <p data-i18n="subtitle">15 lotnisk · czas polski</p>
     </div>
     <div class="spacer"></div>
-    <button class="icon-btn" id="themeBtn" title="Zmień motyw" aria-label="Zmień motyw jasny/ciemny">
+    <button class="icon-btn lang-btn" id="langBtn" data-i18n-aria="langAria" data-i18n-title="langAria" aria-label="Switch to English" title="Switch to English">EN</button>
+    <button class="icon-btn" id="themeBtn" data-i18n-title="theme" data-i18n-aria="themeAria" title="Zmień motyw" aria-label="Zmień motyw jasny/ciemny">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     </button>
   </div>
 
   <div>
-    <div class="section-title"><label for="daySelect">Dzień</label></div>
-    <select id="daySelect" disabled><option>ładowanie…</option></select>
+    <div class="section-title"><label for="daySelect" data-i18n="day">Dzień</label></div>
+    <select id="daySelect" disabled><option data-i18n="loading">ładowanie…</option></select>
   </div>
 
   <div class="kpis" aria-live="polite">
-    <div class="kpi"><div class="v" id="kTotal">–</div><div class="l">wszystkie loty</div></div>
-    <div class="kpi"><div class="v" id="kRoutes">–</div><div class="l">kierunków</div></div>
-    <div class="kpi"><div class="v" id="kDep">–</div><div class="l"><span class="dot dep"></span>odloty</div></div>
-    <div class="kpi"><div class="v" id="kArr">–</div><div class="l"><span class="dot arr"></span>przyloty</div></div>
+    <div class="kpi"><div class="v" id="kTotal">–</div><div class="l" data-i18n="allFlights">wszystkie loty</div></div>
+    <div class="kpi"><div class="v" id="kRoutes">–</div><div class="l" data-i18n="destinations">kierunków</div></div>
+    <div class="kpi"><div class="v" id="kDep">–</div><div class="l"><span class="dot dep"></span><span data-i18n="departures">odloty</span></div></div>
+    <div class="kpi"><div class="v" id="kArr">–</div><div class="l"><span class="dot arr"></span><span data-i18n="arrivals">przyloty</span></div></div>
   </div>
 
   <div>
@@ -271,20 +274,20 @@ button { font: inherit; }
       <div class="section-title" style="margin:0" id="histTitle">Loty na godzinę</div>
       <div class="hist-range" id="rangeLabel">00:00–23:59</div>
     </div>
-    <div class="legend-inline" style="margin-top:4px"><span><i class="dot dep"></i>odloty</span><span><i class="dot arr"></i>przyloty</span></div>
+    <div class="legend-inline" style="margin-top:4px"><span><i class="dot dep"></i><span data-i18n="departures">odloty</span></span><span><i class="dot arr"></i><span data-i18n="arrivals">przyloty</span></span></div>
     <svg id="hist" viewBox="0 0 324 108" preserveAspectRatio="none" tabindex="0" role="slider"
-      aria-label="Wybór godzin: przeciągnij po wykresie albo użyj strzałek (Shift + strzałki rozszerza zakres)"
+      data-i18n-aria="histAria" aria-label="Wybór godzin: przeciągnij po wykresie albo użyj strzałek (Shift + strzałki rozszerza zakres)"
       aria-valuemin="0" aria-valuemax="23"></svg>
-    <div class="hint">Przeciągnij po wykresie, aby zaznaczyć godziny. Kliknij słupek, aby wybrać jedną.</div>
-    <div class="presets" role="group" aria-label="Pory dnia">
-      <button class="preset" data-from="0" data-to="23">Cała doba</button>
-      <button class="preset" data-from="5" data-to="10">Rano</button>
-      <button class="preset" data-from="11" data-to="16">Popołudnie</button>
-      <button class="preset" data-from="17" data-to="22">Wieczór</button>
-      <button class="preset" data-from="23" data-to="4">Noc</button>
+    <div class="hint" data-i18n="hint">Przeciągnij po wykresie, aby zaznaczyć godziny. Kliknij słupek, aby wybrać jedną.</div>
+    <div class="presets" role="group" data-i18n-aria="presetsAria" aria-label="Pory dnia">
+      <button class="preset" data-from="0" data-to="23" data-i18n="allDay">Cała doba</button>
+      <button class="preset" data-from="5" data-to="10" data-i18n="morning">Rano</button>
+      <button class="preset" data-from="11" data-to="16" data-i18n="afternoon">Popołudnie</button>
+      <button class="preset" data-from="17" data-to="22" data-i18n="evening">Wieczór</button>
+      <button class="preset" data-from="23" data-to="4" data-i18n="night">Noc</button>
     </div>
     <div class="play-row">
-      <button class="btn primary" id="playBtn" aria-pressed="false" aria-label="Animuj ruch godzina po godzinie">
+      <button class="btn primary" id="playBtn" aria-pressed="false" data-i18n-aria="playAria" aria-label="Animuj ruch godzina po godzinie">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M6 4l15 8-15 8z"/></svg>
         <span id="playTxt">Animuj dobę</span>
       </button>
@@ -292,20 +295,20 @@ button { font: inherit; }
   </div>
 
   <div>
-    <div class="section-title">Kierunek</div>
-    <div class="seg" role="radiogroup" aria-label="Kierunek">
-      <label><input type="radio" name="dir" value="all" checked>Wszystkie</label>
-      <label><input type="radio" name="dir" value="departure">Odloty</label>
-      <label><input type="radio" name="dir" value="arrival">Przyloty</label>
+    <div class="section-title" data-i18n="direction">Kierunek</div>
+    <div class="seg" role="radiogroup" data-i18n-aria="direction" aria-label="Kierunek">
+      <label><input type="radio" name="dir" value="all" checked><span data-i18n="dirAll">Wszystkie</span></label>
+      <label><input type="radio" name="dir" value="departure"><span data-i18n="dirDep">Odloty</span></label>
+      <label><input type="radio" name="dir" value="arrival"><span data-i18n="dirArr">Przyloty</span></label>
     </div>
   </div>
 
   <div>
-    <div class="section-title">Warstwy</div>
+    <div class="section-title" data-i18n="layers">Warstwy</div>
     <div class="chips">
-      <label class="chip"><input type="checkbox" id="layerHeat" checked>Heatmapa</label>
-      <label class="chip"><input type="checkbox" id="layerCircles" checked>Lotniska</label>
-      <label class="chip"><input type="checkbox" id="layerRoutes">Trasy</label>
+      <label class="chip"><input type="checkbox" id="layerHeat" checked><span data-i18n="heatmap">Heatmapa</span></label>
+      <label class="chip"><input type="checkbox" id="layerCircles" checked><span data-i18n="airports">Lotniska</span></label>
+      <label class="chip"><input type="checkbox" id="layerRoutes"><span data-i18n="routes">Trasy</span></label>
     </div>
   </div>
 
@@ -315,7 +318,7 @@ button { font: inherit; }
         <h2 id="dName"></h2>
         <div class="sub" id="dSub"></div>
       </div>
-      <button class="icon-btn" id="dClose" aria-label="Zamknij szczegóły lotniska">
+      <button class="icon-btn" id="dClose" data-i18n-aria="closeDetail" aria-label="Zamknij szczegóły lotniska">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
@@ -323,17 +326,17 @@ button { font: inherit; }
   </section>
 
   <div>
-    <div class="section-title"><span>Lotniska</span><span class="grow"></span><span style="text-transform:none;letter-spacing:0">w wybranych godzinach</span></div>
+    <div class="section-title"><span data-i18n="airports">Lotniska</span><span class="grow"></span><span style="text-transform:none;letter-spacing:0" data-i18n="inSelectedHours">w wybranych godzinach</span></div>
     <ul class="rank" id="rank"></ul>
   </div>
 
   <div class="note" id="note"></div>
 
-  <div class="foot">Dane: <span id="srcName">–</span> · podkład © Esri, © OpenStreetMap</div>
+  <div class="foot"><span data-i18n="data">Dane</span>: <span id="srcName">–</span> · <span data-i18n="basemap">podkład</span> © Esri, © OpenStreetMap · <a href="https://github.com/EasyK0/polish-air-traffic">GitHub</a></div>
 </aside>
 
 <main id="mapwrap">
-  <div id="map" aria-label="Mapa lotnisk"></div>
+  <div id="map" data-i18n-aria="mapAria" aria-label="Mapa lotnisk"></div>
 </main>
 <div id="tip" role="tooltip"></div>
 
@@ -391,10 +394,106 @@ let map, tiles, heatLayer, circleLayer, routeLayer;
 // ---------- pomocnicze ----------
 const $ = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2, "0");
-const fmt = (n) => n.toLocaleString("pl-PL");
+const fmt = (n) => n.toLocaleString(LOCALE());
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const isDark = () => css("color-scheme") === "dark";
+
+// ---------- języki (PL / EN) ----------
+const I18N = {
+  pl: {
+    title: "Mapa lotów w Polsce", subtitle: "15 lotnisk · czas polski",
+    langAria: "Switch to English", theme: "Zmień motyw", themeAria: "Zmień motyw jasny/ciemny",
+    day: "Dzień", loading: "ładowanie…", allFlights: "wszystkie loty", destinations: "kierunków",
+    departures: "odloty", arrivals: "przyloty", perHour: "Loty na godzinę",
+    histAria: "Wybór godzin: przeciągnij po wykresie albo użyj strzałek (Shift + strzałki rozszerza zakres)",
+    hint: "Przeciągnij po wykresie, aby zaznaczyć godziny. Kliknij słupek, aby wybrać jedną.",
+    presetsAria: "Pory dnia", allDay: "Cała doba", allDayLower: "cała doba", morning: "Rano", afternoon: "Popołudnie",
+    evening: "Wieczór", night: "Noc", play: "Animuj dobę", stop: "Zatrzymaj", playAria: "Animuj ruch godzina po godzinie",
+    direction: "Kierunek", dirAll: "Wszystkie", dirDep: "Odloty", dirArr: "Przyloty",
+    layers: "Warstwy", heatmap: "Heatmapa", airports: "Lotniska", routes: "Trasy",
+    closeDetail: "Zamknij szczegóły lotniska", inSelectedHours: "w wybranych godzinach",
+    data: "Dane", basemap: "podkład", mapAria: "Mapa lotnisk",
+    flightsWord: "lotów", legendTitle: "Loty na lotnisku", ring: "pierścień",
+    detailSub: "{dep} odlotów · {arr} przylotów w wybranych godzinach",
+    noFlights: "Brak lotów w wybranych godzinach.",
+    noteOutside: "{n} lotów ma czas spoza tego dnia i zostało pominiętych.",
+    noteMissing: "Brak części danych: {list}.",
+    errColumn: "Brak kolumny {k} w {file}",
+    errNoDays: "Brak zapisanych dni w data/index.json. Uruchom eksport: start.bat export",
+    errFile: "Otwórz stronę przez serwer (start.bat), a nie bezpośrednio z pliku.",
+    errLeaflet: "Nie udało się wczytać biblioteki mapy (Leaflet). Sprawdź internet i odśwież.",
+    metaDesc: "Interaktywna mapa ruchu lotniczego na polskich lotniskach: heatmapa, trasy i rozkład godzinowy.",
+  },
+  en: {
+    title: "Polish Air Traffic Map", subtitle: "15 airports · Polish time",
+    langAria: "Przełącz na polski", theme: "Change theme", themeAria: "Toggle light/dark theme",
+    day: "Day", loading: "loading…", allFlights: "all flights", destinations: "destinations",
+    departures: "departures", arrivals: "arrivals", perHour: "Flights per hour",
+    histAria: "Hour selection: drag across the chart or use arrow keys (Shift + arrows extends the range)",
+    hint: "Drag across the chart to select hours. Click a bar to pick a single hour.",
+    presetsAria: "Times of day", allDay: "All day", allDayLower: "all day", morning: "Morning", afternoon: "Afternoon",
+    evening: "Evening", night: "Night", play: "Play the day", stop: "Stop", playAria: "Animate traffic hour by hour",
+    direction: "Direction", dirAll: "All", dirDep: "Departures", dirArr: "Arrivals",
+    layers: "Layers", heatmap: "Heatmap", airports: "Airports", routes: "Routes",
+    closeDetail: "Close airport details", inSelectedHours: "in selected hours",
+    data: "Data", basemap: "basemap", mapAria: "Airport map",
+    flightsWord: "flights", legendTitle: "Flights per airport", ring: "ring",
+    detailSub: "{dep} departures · {arr} arrivals in selected hours",
+    noFlights: "No flights in the selected hours.",
+    noteOutside: "{n} flights have a time outside this day and were skipped.",
+    noteMissing: "Some data is missing: {list}.",
+    errColumn: "Missing column {k} in {file}",
+    errNoDays: "No saved days in data/index.json. Run the export: start.bat export",
+    errFile: "Open the page through a server (start.bat), not directly from the file.",
+    errLeaflet: "Could not load the map library (Leaflet). Check your connection and reload.",
+    metaDesc: "Interactive map of air traffic at Polish airports: heatmap, routes and hourly breakdown.",
+  },
+};
+let LANG = (() => {
+  const q = new URLSearchParams(location.search).get("lang");
+  if (q === "pl" || q === "en") return q;
+  try { const s = localStorage.getItem("lang"); if (s === "pl" || s === "en") return s; } catch (e) {}
+  return (navigator.language || "pl").toLowerCase().startsWith("pl") ? "pl" : "en";
+})();
+const LOCALE = () => (LANG === "pl" ? "pl-PL" : "en-GB");
+function t(key, vars = {}) {
+  const s = I18N[LANG][key] ?? I18N.pl[key] ?? key;
+  return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+const depArrHtml = (d, a) =>
+  `<span style="color:${css("--dep")}">●</span> ${t("departures")} ${d} · <span style="color:${css("--arr")}">●</span> ${t("arrivals")} ${a}`;
+
+// Tłumaczy statyczny HTML oznaczony data-i18n / data-i18n-aria / data-i18n-title.
+function applyStatic() {
+  document.documentElement.lang = LANG;
+  document.title = LANG === "pl" ? "Mapa lotów w Polsce" : "Polish Air Traffic Map";
+  document.querySelector('meta[name="description"]').setAttribute("content", t("metaDesc"));
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => el.setAttribute("title", t(el.dataset.i18nTitle)));
+  const lb = document.getElementById("langBtn");
+  if (lb) lb.textContent = LANG === "pl" ? "EN" : "PL";
+}
+
+function fillDaySelect() {
+  const sel = $("daySelect");
+  const cur = sel.value;
+  sel.innerHTML = state.days.map((d) => `<option value="${esc(d.date)}">${esc(dayName(d.date))} · ${fmt(d.rows)} ${t("flightsWord")}</option>`).join("");
+  if (cur && state.days.some((d) => d.date === cur)) sel.value = cur;
+}
+
+function setLang(l) {
+  LANG = l;
+  try { localStorage.setItem("lang", l); } catch (e) {}
+  const url = new URL(location.href); url.searchParams.set("lang", l); history.replaceState(null, "", url);
+  applyStatic();
+  if (state.days.length) fillDaySelect();
+  if (!state.playing) $("playTxt").textContent = t("play"); else $("playTxt").textContent = t("stop");
+  updateNotes();
+  if (legend) { legend.remove(); legend.addTo(map); }
+  render();
+}
 
 function parseCSV(text) {
   const rows = []; let row = [], field = "", q = false;
@@ -454,7 +553,7 @@ function airportLabel(icao, short = false) {
   return `${city} (${c[2] || icao})`;
 }
 
-const dayName = (date) => new Intl.DateTimeFormat("pl-PL", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(date + "T12:00:00Z"));
+const dayName = (date) => new Intl.DateTimeFormat(LOCALE(), { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(date + "T12:00:00Z"));
 
 // ---------- dane ----------
 async function fetchJSON(url) {
@@ -469,7 +568,7 @@ async function loadDay(day) {
   if (!res.ok) throw new Error(`${day.file}: HTTP ${res.status}`);
   const rows = parseCSV((await res.text()).trim());
   const idx = Object.fromEntries(rows[0].map((h, i) => [h.trim(), i]));
-  for (const k of ["type", "airport", "firstSeen", "lastSeen"]) if (idx[k] === undefined) throw new Error(`Brak kolumny ${k} w ${day.file}`);
+  for (const k of ["type", "airport", "firstSeen", "lastSeen"]) if (idx[k] === undefined) throw new Error(t("errColumn", { k, file: day.file }));
   const flights = []; let outside = 0;
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
@@ -524,7 +623,7 @@ function render() {
   if (!state.day) return;
   const list = visibleFlights();
   const counts = countsByAirport(list);
-  $("rangeLabel").textContent = state.from === 0 && state.to === 23 ? "cała doba"
+  $("rangeLabel").textContent = state.from === 0 && state.to === 23 ? t("allDayLower")
     : `${pad(state.from)}:00–${pad(state.to)}:59`;
   renderMap(list, counts);
   renderKpis(list);
@@ -546,7 +645,7 @@ function setupHistogram() {
   const svg = $("hist");
   let anchor = null;
   const tipFor = (h, e) => showTip(
-    `<b>${pad(h)}:00–${pad(h)}:59</b><br><span style="color:${css("--dep")}">●</span> odloty ${HIST.dep[h]} · <span style="color:${css("--arr")}">●</span> przyloty ${HIST.arr[h]}`,
+    `<b>${pad(h)}:00–${pad(h)}:59</b><br>${depArrHtml(HIST.dep[h], HIST.arr[h])}`,
     e.clientX, e.clientY);
 
   svg.addEventListener("pointerdown", (e) => {
@@ -626,10 +725,10 @@ function renderMap(list, counts) {
     const m = L.marker([a.lat, a.lon], {
       icon: L.divIcon({ html, className: "ap-icon", iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
       zIndexOffset: sel ? 10000 : -c.total, // mniejsze na wierzchu, żeby nie znikały pod WAW
-      title: `${a.name}: ${c.total} lotów`, keyboard: true, riseOnHover: true,
+      title: `${a.name}: ${c.total} ${t("flightsWord")}`, keyboard: true, riseOnHover: true,
     });
     m.bindTooltip(
-      `<b>${esc(a.name)} (${a.iata})</b><br><span style="color:${css("--dep")}">●</span> odloty ${c.departure} · <span style="color:${css("--arr")}">●</span> przyloty ${c.arrival}`,
+      `<b>${esc(a.name)} (${a.iata})</b><br>${depArrHtml(c.departure, c.arrival)}`,
       { direction: "top", offset: [0, -size / 2] });
     m.on("click", () => selectAirport(icao));
     m.addTo(circleLayer);
@@ -707,7 +806,7 @@ function renderHistogram() {
   svg.setAttribute("aria-valuetext", $("rangeLabel").textContent);
   document.querySelectorAll(".preset").forEach((b) =>
     b.setAttribute("aria-pressed", String(+b.dataset.from === state.from && +b.dataset.to === state.to)));
-  $("histTitle").textContent = state.selected ? `Loty na godzinę · ${AIRPORTS[state.selected].iata}` : "Loty na godzinę";
+  $("histTitle").textContent = state.selected ? `${t("perHour")} · ${AIRPORTS[state.selected].iata}` : t("perHour");
 }
 
 function renderRanking(counts) {
@@ -735,14 +834,14 @@ function renderDetail() {
   const inRange = state.flights.filter((f) => f.ap === icao && inWindow(f.hour) && dirOk(f));
   const dep = inRange.filter((f) => f.type === "departure").length;
   $("dName").textContent = `${a.name} (${a.iata})`;
-  $("dSub").textContent = `${fmt(dep)} odlotów · ${fmt(inRange.length - dep)} przylotów w wybranych godzinach`;
+  $("dSub").textContent = t("detailSub", { dep: fmt(dep), arr: fmt(inRange.length - dep) });
   const dests = new Map();
   for (const f of inRange) if (f.other) dests.set(f.other, (dests.get(f.other) || 0) + 1);
   const top = [...dests].sort((x, y) => y[1] - x[1]).slice(0, 6);
   const max = top[0]?.[1] || 1;
   $("dDests").innerHTML = top.length ? top.map(([k, n]) =>
     `<li><div><div class="lbl">${esc(airportLabel(k))}</div><div class="bar" style="width:${(n / max) * 100}%"></div></div><span class="n">${n}</span></li>`
-  ).join("") : `<li style="color:var(--text-3)">Brak lotów w wybranych godzinach.</li>`;
+  ).join("") : `<li style="color:var(--text-3)">${t("noFlights")}</li>`;
   box.classList.add("open");
 }
 
@@ -764,7 +863,7 @@ function setHours(from, to, fromPlay = false) {
 function stopPlay() {
   if (!state.playing) return;
   clearInterval(state.playing); state.playing = null;
-  $("playTxt").textContent = "Animuj dobę";
+  $("playTxt").textContent = t("play");
   $("playIcon").innerHTML = '<path d="M6 4l15 8-15 8z"/>';
   $("playBtn").setAttribute("aria-pressed", "false");
 }
@@ -775,7 +874,7 @@ function togglePlay() {
   const step = () => { setHours(h, h, true); h = (h + 1) % 24; };
   step();
   state.playing = setInterval(step, 900);
-  $("playTxt").textContent = "Zatrzymaj";
+  $("playTxt").textContent = t("stop");
   $("playIcon").innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
   $("playBtn").setAttribute("aria-pressed", "true");
 }
@@ -788,15 +887,20 @@ async function chooseDay(date) {
     state.day = day; state.flights = data.flights; state.outside = data.outside;
     const url = new URL(location.href); url.searchParams.set("day", date); history.replaceState(null, "", url);
     $("srcName").textContent = day.source === "opensky" ? "OpenSky Network" : day.source === "aerodatabox" ? "AeroDataBox" : day.source;
-    const notes = [];
-    if (data.outside) notes.push(`${data.outside} lotów ma czas spoza tego dnia i zostało pominiętych.`);
-    if (day.missing?.length) notes.push(`Brak części danych: ${day.missing.join(", ")}.`);
-    if (day.note) notes.push(day.note);
-    $("note").textContent = notes.join(" ");
+    updateNotes();
     render();
   } catch (e) {
     $("note").innerHTML = `<span class="error">${esc(e.message)}</span>`;
   }
+}
+
+function updateNotes() {
+  const day = state.day, notes = [];
+  if (!day) return;
+  if (state.outside) notes.push(t("noteOutside", { n: state.outside }));
+  if (day.missing?.length) notes.push(t("noteMissing", { list: day.missing.join(", ") }));
+  if (day.note && LANG === "pl") notes.push(day.note);
+  $("note").textContent = notes.join(" ");
 }
 
 function toggleLayer(id, layer) {
@@ -812,7 +916,7 @@ function applyTiles() {
   const base = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${v}_Gray_Base/MapServer/tile/{z}/{y}/{x}`;
   const ref = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${v}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`;
   if (tiles) { tiles.setUrl(base); labels.setUrl(ref); return; }
-  tiles = L.tileLayer(base, { attribution: "Podkład © Esri, HERE, Garmin, © OpenStreetMap", maxZoom: 16 }).addTo(map);
+  tiles = L.tileLayer(base, { attribution: "© Esri, HERE, Garmin, © OpenStreetMap", maxZoom: 16 }).addTo(map);
   labels = L.tileLayer(ref, { maxZoom: 16 }).addTo(map);
 }
 function setTheme(t) {
@@ -825,6 +929,8 @@ try { const t = localStorage.getItem("theme"); if (t) document.documentElement.s
 // ---------- start ----------
 let legend;
 async function init() {
+  applyStatic();
+  $("playTxt").textContent = t("play");
   map = L.map("map", { zoomSnap: 0.5, zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
   map.fitBounds(Object.values(AIRPORTS).map((a) => [a.lat, a.lon]), { padding: [40, 40] });
@@ -841,10 +947,10 @@ async function init() {
   legend.onAdd = () => {
     const div = L.DomUtil.create("div", "map-legend");
     // Jedna skala dla heatmapy i plakietek: kolor = natężenie ruchu.
-    div.innerHTML = `<h4>Loty na lotnisku</h4>
+    div.innerHTML = `<h4>${t("legendTitle")}</h4>
       <div class="heatbar" style="background:linear-gradient(90deg,${BADGE_STOPS.map((c, i) => `${c} ${(STOP_POS[i] * 100).toFixed(1)}%`).join(",")})"></div>
       <div class="ticks abs">${SEQ.filter((s) => [1, 10, 50, 250].includes(s.min)).map((s) => `<span style="left:${(tOf(s.min) * 100).toFixed(1)}%">${s.label}</span>`).join("")}</div>
-      <div class="ring-legend"><span class="ring-demo"></span>pierścień: <i class="dot dep"></i>odloty <i class="dot arr"></i>przyloty</div>`;
+      <div class="ring-legend"><span class="ring-demo"></span>${t("ring")}: <i class="dot dep"></i>${t("departures")} <i class="dot arr"></i>${t("arrivals")}</div>`;
     return div;
   };
   legend.addTo(map);
@@ -863,6 +969,7 @@ async function init() {
   let lastZoomBand = null;
   map.on("zoomend", () => { const b = map.getZoom() < 5.5; if (b !== lastZoomBand) { lastZoomBand = b; render(); } });
   $("themeBtn").addEventListener("click", () => setTheme(isDark() ? "light" : "dark"));
+  $("langBtn").addEventListener("click", () => setLang(LANG === "pl" ? "en" : "pl"));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.selected) clearSelection(); });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { applyTiles(); render(); });
 
@@ -873,22 +980,22 @@ async function init() {
     ]);
     state.coords = coords;
     state.days = index.days || [];
-    if (!state.days.length) throw new Error("Brak zapisanych dni w data/index.json. Uruchom eksport: start.bat export");
+    if (!state.days.length) throw new Error(t("errNoDays"));
     const sel = $("daySelect");
-    sel.innerHTML = state.days.map((d) => `<option value="${esc(d.date)}">${esc(dayName(d.date))} · ${fmt(d.rows)} lotów</option>`).join("");
+    fillDaySelect();
     sel.disabled = false;
     const wanted = new URL(location.href).searchParams.get("day");
     const first = state.days.some((d) => d.date === wanted) ? wanted : state.days[0].date;
     sel.value = first;
     await chooseDay(first);
   } catch (e) {
-    const hint = location.protocol === "file:" ? " Otwórz stronę przez serwer (start.bat), a nie bezpośrednio z pliku." : "";
+    const hint = location.protocol === "file:" ? " " + t("errFile") : "";
     $("note").innerHTML = `<span class="error">${esc(e.message)}.${hint}</span>`;
   }
 }
 
 if (window.L) init();
-else document.body.insertAdjacentHTML("afterbegin", '<p class="error" style="padding:16px">Nie udało się wczytać biblioteki mapy (Leaflet). Sprawdź internet i odśwież.</p>');
+else document.body.insertAdjacentHTML("afterbegin", `<p class="error" style="padding:16px">${t("errLeaflet")}</p>`);
 </script>
 </body>
 </html>

@@ -1,6 +1,10 @@
 # ✈️ Mapa lotów w Polsce
 
+🇵🇱 Polski · [🇬🇧 English](README.en.md)
+
 Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężenia ruchu, trasy do lotnisk docelowych, rozkład godzinowy i ranking lotnisk. Dane pochodzą z [OpenSky Network](https://opensky-network.org) i są pobierane skryptem Node.js.
+
+> 🎓 Projekt powstał na zaliczenie przedmiotu **Wizualizacja informacji** na studiach, a potem został rozbudowany.
 
 **[▶ Zobacz demo](https://easyk0.github.io/polish-air-traffic/)**
 
@@ -14,7 +18,7 @@ Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężen
 - **Filtr kierunku:** wszystkie loty, same odloty albo same przyloty.
 - **Szczegóły lotniska:** po kliknięciu wykres godzinowy tego lotniska i najczęstsze kierunki.
 - **Wybór dnia** spośród zapisanych eksportów, czas lokalny (Europe/Warsaw).
-- **Jasny i ciemny motyw**, układ dopasowany do telefonu, obsługa klawiaturą.
+- **Interfejs po polsku i angielsku**, **jasny i ciemny motyw**, układ dopasowany do telefonu, obsługa klawiaturą.
 
 <details>
 <summary>Ciemny motyw</summary>
@@ -81,8 +85,3 @@ Workflow [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.y
 - Współrzędne lotnisk: [OurAirports](https://ourairports.com/data/) (domena publiczna).
 - Podkład mapy: Esri World Gray Canvas, © OpenStreetMap.
 
----
-
-## English summary
-
-Interactive map of air traffic at 15 Polish airports: heatmap, routes, hourly histogram with brush selection, per-airport details, light/dark theme. A Node.js exporter pulls daily departures/arrivals from the OpenSky Network REST API (OAuth2 client credentials, retry and rate-limit handling) into CSV files; a static Leaflet page visualizes them. No build step: run `start.bat export` (Windows) or `node export.mjs` and serve the folder with any static server.
