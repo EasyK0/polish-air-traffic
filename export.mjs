@@ -7,6 +7,7 @@
 //   node export.mjs --source=aerodatabox     AeroDataBox przez API.Market
 //   node export.mjs --date=2026-11-03 --airports=EPWA,EPKK
 //   node export.mjs --index-only             tylko przebuduj data/index.json
+//   node export.mjs --keep=60                po eksporcie zostaw 60 najnowszych dni
 //
 // Klucze: api_key.txt (wzór w api_key.template.txt) albo zmienne środowiskowe.
 import fs from "node:fs";
@@ -39,6 +40,14 @@ function buildIndex() {
     days.push({ date: m[1], file: f, rows, source: meta.source ?? "?", missing: meta.missing ?? [], note: meta.note });
   }
   days.sort((a, b) => b.date.localeCompare(a.date));
+  // --keep=N: zostaw tylko N najnowszych dni (żeby repo i demo nie rosły bez końca).
+  const keep = Number(args.keep);
+  if (keep > 0 && days.length > keep) {
+    for (const d of days.splice(keep)) {
+      for (const f of [d.file, `flights_${d.date}.meta.json`]) fs.rmSync(path.join(DATA, f), { force: true });
+      console.log(`Usunięto stary dzień ${d.date} (--keep=${keep})`);
+    }
+  }
   fs.writeFileSync(path.join(DATA, "index.json"), JSON.stringify({ generated: new Date().toISOString(), days }, null, 2));
   console.log(`index.json: ${days.length} dni (${days.map((d) => d.date).join(", ") || "brak"})`);
 }

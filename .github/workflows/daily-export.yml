@@ -1,0 +1,58 @@
+# Codziennie pobiera wczorajsze loty z OpenSky i dopisuje je do data/.
+# Po pushu GitHub Pages sam odświeża demo.
+#
+# Wymagane sekrety repozytorium (Settings -> Secrets and variables -> Actions):
+#   OPENSKY_CLIENT_ID, OPENSKY_CLIENT_SECRET
+name: Codzienny eksport lotów
+
+on:
+  schedule:
+    # 06:15 UTC = 07:15 / 08:15 w Polsce; OpenSky przelicza poprzedni dzień w nocy.
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Dzień do pobrania (RRRR-MM-DD), puste = wczoraj"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-export
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Eksport z OpenSky
+        env:
+          OPENSKY_CLIENT_ID: ${{ secrets.OPENSKY_CLIENT_ID }}
+          OPENSKY_CLIENT_SECRET: ${{ secrets.OPENSKY_CLIENT_SECRET }}
+          INPUT_DATE: ${{ github.event.inputs.date }}
+        run: |
+          if [ -z "$OPENSKY_CLIENT_ID" ] || [ -z "$OPENSKY_CLIENT_SECRET" ]; then
+            echo "::error::Brak sekretów OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET"; exit 1
+          fi
+          ARGS="--source=opensky --keep=60"
+          if [ -n "$INPUT_DATE" ]; then ARGS="$ARGS --date=$INPUT_DATE"; fi
+          # kod 2 = zapisano dzień, ale części danych brakuje: commitujemy mimo to
+          set +e; node export.mjs $ARGS; code=$?; set -e
+          if [ "$code" = "2" ]; then echo "::warning::Eksport niepełny, szczegóły w logu"; elif [ "$code" != "0" ]; then exit $code; fi
+
+      - name: Commit nowych danych
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then echo "Brak zmian"; exit 0; fi
+          git commit -m "Dane: $(jq -r '.days[0].date' data/index.json)"
+          git push

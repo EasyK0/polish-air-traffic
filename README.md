@@ -59,6 +59,10 @@ node export.mjs --date=2026-11-03
 node export.mjs --source=aerodatabox --airports=EPWA,EPKK
 ```
 
+## Automatyczna aktualizacja
+
+Workflow [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.yml) codziennie rano pobiera poprzedni dzień z OpenSky, zapisuje go w `data/` (trzyma 60 ostatnich dni) i commituje. GitHub Pages odświeża wtedy demo. Wymaga sekretów repozytorium `OPENSKY_CLIENT_ID` i `OPENSKY_CLIENT_SECRET`. Konkretny dzień można pobrać ręcznie z zakładki Actions (*Run workflow*).
+
 ## Struktura
 
 | Ścieżka | Opis |
