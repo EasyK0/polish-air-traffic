@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<title>Mapa lotów w Polsce</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Interaktywna mapa ruchu lotniczego na polskich lotniskach: heatmapa, trasy i rozkład godzinowy." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+
+<style>
+/* ---------- tokeny ---------- */
+:root {
+  color-scheme: light;
+  --bg: #f3f3f1;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e2e1dc;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --text-3: #7a7974;
+  --accent: #2a78d6;
+  --accent-soft: #cde2fb;
+  --dep: #eb6834;          /* odloty: slot 2 */
+  --arr: #2a78d6;          /* przyloty: slot 1 */
+  --zero: #c9c8c2;
+  --warn-bg: #fff4dd;
+  --warn-text: #7a4b00;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110; --surface: #1a1a19; --surface-2: #262624; --border: #33332f;
+    --text: #f0efec; --text-2: #c3c2b7; --text-3: #8f8e86;
+    --accent: #3987e5; --accent-soft: #184f95;
+    --dep: #d95926; --arr: #3987e5; --zero: #4a4a45;
+    --warn-bg: #3a2c10; --warn-text: #f3cf86;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface: #1a1a19; --surface-2: #262624; --border: #33332f;
+  --text: #f0efec; --text-2: #c3c2b7; --text-3: #8f8e86;
+  --accent: #3987e5; --accent-soft: #184f95;
+  --dep: #d95926; --arr: #3987e5; --zero: #4a4a45;
+  --warn-bg: #3a2c10; --warn-text: #f3cf86;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.35);
+}
+
+/* ---------- układ ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px; line-height: 1.45;
+  background: var(--bg); color: var(--text);
+  display: grid; grid-template-columns: 360px 1fr; height: 100vh; overflow: hidden;
+}
+#sidebar {
+  background: var(--surface); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 18px;
+}
+#mapwrap { position: relative; min-height: 0; }
+#map { position: absolute; inset: 0; background: var(--surface-2); }
+
+/* ---------- nagłówek ---------- */
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo {
+  width: 36px; height: 36px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; background: var(--accent); color: #fff;
+}
+.brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.brand p { font-size: 12px; color: var(--text-3); }
+.brand .spacer { flex: 1; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-2); cursor: pointer; display: grid; place-items: center;
+}
+.icon-btn:hover { background: var(--surface-2); }
+
+/* ---------- formularz ---------- */
+.section-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-3); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+}
+.section-title .grow { flex: 1; }
+select {
+  width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg label { text-align: center; padding: 6px 4px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-2); font-weight: 500; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; color: var(--text-2); user-select: none; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip:has(input:checked) { background: var(--accent-soft); border-color: transparent; color: var(--text); }
+.chip:has(input:focus-visible) { outline: 2px solid var(--accent); }
+.chip svg { width: 14px; height: 14px; }
+
+/* ---------- KPI ---------- */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kpi { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.kpi .v { font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.kpi .l { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.dep { background: var(--dep); } .dot.arr { background: var(--arr); }
+
+/* ---------- histogram godzin ---------- */
+.hist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.hist-range { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.legend-inline { display: flex; gap: 12px; font-size: 12px; color: var(--text-2); }
+.legend-inline span { display: inline-flex; align-items: center; gap: 5px; }
+#hist { width: 100%; height: 110px; display: block; margin-top: 6px; overflow: visible; cursor: crosshair; touch-action: none; user-select: none; border-radius: 6px; }
+#hist:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+#hist .axis { fill: var(--text-3); font-size: 9px; font-family: inherit; pointer-events: none; }
+#hist .base { stroke: var(--border); }
+#hist .band { fill: var(--accent-soft); opacity: .55; }
+#hist .handle { fill: var(--accent); }
+.hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.preset {
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-2); cursor: pointer; font-size: 12px; font-weight: 500;
+}
+.preset:hover { background: var(--surface-2); }
+.preset[aria-pressed="true"] { background: var(--accent-soft); border-color: transparent; color: var(--text); }
+.play-row { display: flex; gap: 8px; margin-top: 8px; }
+.btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); cursor: pointer; font-weight: 500; font-size: 13px;
+}
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.08); }
+
+/* ---------- ranking lotnisk ---------- */
+.rank { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.rank li button {
+  width: 100%; display: grid; grid-template-columns: 38px 1fr 44px; gap: 8px; align-items: center;
+  padding: 6px 6px; border-radius: 8px; border: none; background: none; color: inherit; cursor: pointer; text-align: left;
+}
+.rank li button:hover, .rank li button[aria-pressed="true"] { background: var(--surface-2); }
+.rank .code { font-weight: 600; font-size: 13px; }
+.rank .name { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank .num { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rank .track { display: flex; gap: 2px; height: 6px; margin-top: 4px; }
+.rank .track i { display: block; height: 100%; border-radius: 3px; min-width: 0; }
+.rank .track i.dep { background: var(--dep); } .rank .track i.arr { background: var(--arr); }
+
+/* ---------- karta lotniska ---------- */
+#detail { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: none; }
+#detail.open { display: block; }
+#detail .top { display: flex; align-items: flex-start; gap: 8px; }
+#detail h2 { font-size: 15px; font-weight: 700; flex: 1; }
+#detail .sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+#detail .dests { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+#detail .dests li { display: grid; grid-template-columns: 1fr 34px; gap: 6px; align-items: center; }
+#detail .dests .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+#detail .dests .lbl b { color: var(--text); font-weight: 600; }
+#detail .dests .bar { height: 4px; background: var(--accent); border-radius: 2px; margin-top: 3px; opacity: .7; }
+#detail .dests .n { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.note { font-size: 12px; background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 8px 10px; }
+.note:empty { display: none; }
+.error { color: #d03b3b; font-weight: 600; }
+.foot { font-size: 11px; color: var(--text-3); margin-top: auto; }
+.foot a { color: inherit; }
+
+/* ---------- mapa ---------- */
+.leaflet-container { font-family: inherit; }
+.ap-label {
+  background: var(--surface) !important; color: var(--text) !important; border: none !important;
+  border-radius: 6px !important; padding: 1px 6px !important; font-weight: 600 !important; font-size: 11px !important;
+  box-shadow: var(--shadow) !important;
+}
+.ap-label::before { display: none !important; }
+.ap-icon { background: none; border: none; }
+.ap {
+  border-radius: 50%; padding: 3px; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  transition: transform .15s ease; cursor: pointer;
+}
+.ap-icon:hover .ap, .ap-icon:focus-visible .ap { transform: scale(1.12); }
+.ap.sel { box-shadow: 0 0 0 3px var(--text), 0 2px 10px rgba(0,0,0,.35); }
+.ap.empty { padding: 2px; opacity: .75; }
+.ap-in {
+  width: 100%; height: 100%; border-radius: 50%;
+  border: 2px solid var(--surface); /* odstęp między pierścieniem a wnętrzem */
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  line-height: 1.05; text-align: center; overflow: hidden;
+}
+.ap-in b { font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+.ap-in span { font-size: 10px; font-weight: 500; opacity: .9; font-variant-numeric: tabular-nums; }
+.leaflet-tooltip { background: var(--surface); color: var(--text); border-color: var(--border); }
+.leaflet-tooltip-top::before { border-top-color: var(--surface); }
+.leaflet-control-zoom a { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--surface) 80%, transparent) !important; color: var(--text-3) !important; }
+.leaflet-control-attribution a { color: var(--text-2) !important; }
+.map-legend { background: var(--surface); color: var(--text); padding: 10px 12px; border-radius: 10px; box-shadow: var(--shadow); font-size: 12px; }
+.map-legend h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); margin-bottom: 6px; }
+.map-legend .ramp { display: flex; gap: 2px; }
+.map-legend .ramp i { width: 22px; height: 10px; border-radius: 3px; display: block; }
+.ring-legend { display: flex; align-items: center; gap: 5px; margin-top: 8px; color: var(--text-2); font-size: 11px; }
+.ring-demo { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(var(--dep) 0 50%, var(--arr) 50% 100%); }
+.map-legend .heatbar { height: 10px; border-radius: 3px; width: 142px; }
+.map-legend .ticks { display: flex; justify-content: space-between; color: var(--text-3); font-size: 10px; margin-top: 3px; }
+#tip {
+  position: fixed; z-index: 2000; pointer-events: none; display: none;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 9px; font-size: 12px; box-shadow: var(--shadow); white-space: nowrap;
+}
+
+/* ---------- telefon ---------- */
+@media (max-width: 820px) {
+  body { display: block; height: auto; overflow: auto; }
+  #sidebar { border-right: none; border-bottom: 1px solid var(--border); padding: 14px 16px 18px; }
+  #mapwrap { height: 70vh; }
+  .map-legend { display: none; }
+}
+</style>
+</head>
+
+<body>
+<aside id="sidebar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+    </div>
+    <div>
+      <h1>Mapa lotów w Polsce</h1>
+      <p>15 lotnisk · czas polski</p>
+    </div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="themeBtn" title="Zmień motyw" aria-label="Zmień motyw jasny/ciemny">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+  </div>
+
+  <div>
+    <div class="section-title"><label for="daySelect">Dzień</label></div>
+    <select id="daySelect" disabled><option>ładowanie…</option></select>
+  </div>
+
+  <div class="kpis" aria-live="polite">
+    <div class="kpi"><div class="v" id="kTotal">–</div><div class="l">wszystkie loty</div></div>
+    <div class="kpi"><div class="v" id="kRoutes">–</div><div class="l">kierunków</div></div>
+    <div class="kpi"><div class="v" id="kDep">–</div><div class="l"><span class="dot dep"></span>odloty</div></div>
+    <div class="kpi"><div class="v" id="kArr">–</div><div class="l"><span class="dot arr"></span>przyloty</div></div>
+  </div>
+
+  <div>
+    <div class="hist-head">
+      <div class="section-title" style="margin:0" id="histTitle">Loty na godzinę</div>
+      <div class="hist-range" id="rangeLabel">00:00–23:59</div>
+    </div>
+    <div class="legend-inline" style="margin-top:4px"><span><i class="dot dep"></i>odloty</span><span><i class="dot arr"></i>przyloty</span></div>
+    <svg id="hist" viewBox="0 0 324 108" preserveAspectRatio="none" tabindex="0" role="slider"
+      aria-label="Wybór godzin: przeciągnij po wykresie albo użyj strzałek (Shift + strzałki rozszerza zakres)"
+      aria-valuemin="0" aria-valuemax="23"></svg>
+    <div class="hint">Przeciągnij po wykresie, aby zaznaczyć godziny. Kliknij słupek, aby wybrać jedną.</div>
+    <div class="presets" role="group" aria-label="Pory dnia">
+      <button class="preset" data-from="0" data-to="23">Cała doba</button>
+      <button class="preset" data-from="5" data-to="10">Rano</button>
+      <button class="preset" data-from="11" data-to="16">Popołudnie</button>
+      <button class="preset" data-from="17" data-to="22">Wieczór</button>
+      <button class="preset" data-from="23" data-to="4">Noc</button>
+    </div>
+    <div class="play-row">
+      <button class="btn primary" id="playBtn" aria-pressed="false" aria-label="Animuj ruch godzina po godzinie">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M6 4l15 8-15 8z"/></svg>
+        <span id="playTxt">Animuj dobę</span>
+      </button>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">Kierunek</div>
+    <div class="seg" role="radiogroup" aria-label="Kierunek">
+      <label><input type="radio" name="dir" value="all" checked>Wszystkie</label>
+      <label><input type="radio" name="dir" value="departure">Odloty</label>
+      <label><input type="radio" name="dir" value="arrival">Przyloty</label>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">Warstwy</div>
+    <div class="chips">
+      <label class="chip"><input type="checkbox" id="layerHeat" checked>Heatmapa</label>
+      <label class="chip"><input type="checkbox" id="layerCircles" checked>Lotniska</label>
+      <label class="chip"><input type="checkbox" id="layerRoutes">Trasy</label>
+    </div>
+  </div>
+
+  <section id="detail" aria-live="polite">
+    <div class="top">
+      <div style="flex:1">
+        <h2 id="dName"></h2>
+        <div class="sub" id="dSub"></div>
+      </div>
+      <button class="icon-btn" id="dClose" aria-label="Zamknij szczegóły lotniska">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <ul class="dests" id="dDests"></ul>
+  </section>
+
+  <div>
+    <div class="section-title"><span>Lotniska</span><span class="grow"></span><span style="text-transform:none;letter-spacing:0">w wybranych godzinach</span></div>
+    <ul class="rank" id="rank"></ul>
+  </div>
+
+  <div class="note" id="note"></div>
+
+  <div class="foot">Dane: <span id="srcName">–</span> · podkład © Esri, © OpenStreetMap</div>
+</aside>
+
+<main id="mapwrap">
+  <div id="map" aria-label="Mapa lotnisk"></div>
+</main>
+<div id="tip" role="tooltip"></div>
+
+<script>
+"use strict";
+const TZ = "Europe/Warsaw";
+const DATA_DIR = "data/";
+
+// 15 polskich lotnisk z eksportu (ICAO). Współrzędne lotnisk zagranicznych: data/airports_coords.json.
+const AIRPORTS = {
+  EPWA: { iata: "WAW", name: "Warszawa Chopin",     lat: 52.1657, lon: 20.9679 },
+  EPMO: { iata: "WMI", name: "Warszawa Modlin",     lat: 52.4511, lon: 20.6518 },
+  EPKK: { iata: "KRK", name: "Kraków Balice",       lat: 50.0777, lon: 19.7848 },
+  EPGD: { iata: "GDN", name: "Gdańsk Lech Wałęsa",  lat: 54.3775, lon: 18.4663 },
+  EPWR: { iata: "WRO", name: "Wrocław Copernicus",  lat: 51.1027, lon: 16.8858 },
+  EPKT: { iata: "KTW", name: "Katowice Pyrzowice",  lat: 50.4743, lon: 19.0800 },
+  EPPO: { iata: "POZ", name: "Poznań Ławica",       lat: 52.4210, lon: 16.8263 },
+  EPSC: { iata: "SZZ", name: "Szczecin Goleniów",   lat: 53.5847, lon: 14.9022 },
+  EPRZ: { iata: "RZE", name: "Rzeszów Jasionka",    lat: 50.1092, lon: 22.0193 },
+  EPLL: { iata: "LCJ", name: "Łódź Lublinek",       lat: 51.7219, lon: 19.3981 },
+  EPLB: { iata: "LUZ", name: "Lublin",              lat: 51.2391, lon: 22.7145 },
+  EPBY: { iata: "BZG", name: "Bydgoszcz",           lat: 53.0967, lon: 17.9773 },
+  EPSY: { iata: "SZY", name: "Olsztyn-Mazury",      lat: 53.4819, lon: 20.9375 },
+  EPZG: { iata: "IEG", name: "Zielona Góra",        lat: 52.1385, lon: 15.7986 },
+  EPRA: { iata: "RDO", name: "Radom",               lat: 51.3890, lon: 21.2133 },
+};
+
+// Progi liczby lotów na lotnisku. Kolor plakietki bierze się z tej samej skali co heatmapa
+// (zielony -> żółty -> pomarańczowy -> czerwony), więc plakietka ma kolor plamy pod nią.
+const SEQ = [
+  { min: 1,   label: "1"    },
+  { min: 10,  label: "10"   },
+  { min: 25,  label: "25"   },
+  { min: 50,  label: "50"   },
+  { min: 100, label: "100"  },
+  { min: 250, label: "250+" },
+];
+// Zielony = mały ruch, czerwony = największy (w obu motywach).
+// Liczby na plakietkach są drugim nośnikiem informacji dla osób nierozróżniających zieleni i czerwieni.
+const BADGE_STOPS = ["#22c55e", "#a3e635", "#facc15", "#fb923c", "#ef4444", "#b91c1c"];
+const badgeStops = () => BADGE_STOPS;
+// Tekst na plakietce: ciemny na jasnym tle, biały na ciemnym (wg jasności koloru).
+function inkFor(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? "#1a1a19" : "#ffffff";
+}
+
+const state = {
+  days: [], coords: {}, cache: new Map(),
+  day: null, flights: [], outside: 0,
+  from: 0, to: 23, dir: "all", selected: null, playing: null,
+};
+let map, tiles, heatLayer, circleLayer, routeLayer;
+
+// ---------- pomocnicze ----------
+const $ = (id) => document.getElementById(id);
+const pad = (n) => String(n).padStart(2, "0");
+const fmt = (n) => n.toLocaleString("pl-PL");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const isDark = () => css("color-scheme") === "dark";
+
+function parseCSV(text) {
+  const rows = []; let row = [], field = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; } else field += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else if (c !== "\r") field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+const localFmt = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" });
+function localParts(ts) {
+  const p = Object.fromEntries(localFmt.formatToParts(new Date(ts * 1000)).map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) };
+}
+const inWindow = (h) => state.from <= state.to ? h >= state.from && h <= state.to : h >= state.from || h <= state.to;
+
+// Heatmapa: ta sama skala, od zielonego (mało) do czerwonego (dużo).
+function heatGradient() {
+  const s = badgeStops(); // ta sama skala co plakietki lotnisk
+  return { 0.1: s[0], 0.3: s[1], 0.5: s[2], 0.7: s[3], 0.85: s[4], 1: s[5] };
+}
+
+function seqColor(total) {
+  if (!total) return css("--zero");
+  const level = SEQ.reduce((i, s, k) => (total >= s.min ? k : i), 0);
+  return badgeStops()[level];
+}
+
+function airportLabel(icao, short = false) {
+  if (AIRPORTS[icao]) return short ? AIRPORTS[icao].iata : `${AIRPORTS[icao].name} (${AIRPORTS[icao].iata})`;
+  const c = state.coords[icao];
+  if (!c) return icao || "nieznane";
+  const city = c[4] || c[3];
+  return `${city} (${c[2] || icao})`;
+}
+
+const dayName = (date) => new Intl.DateTimeFormat("pl-PL", { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(date + "T12:00:00Z"));
+
+// ---------- dane ----------
+async function fetchJSON(url) {
+  const res = await fetch(`${url}?v=${Date.now()}`);
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  return res.json();
+}
+
+async function loadDay(day) {
+  if (state.cache.has(day.date)) return state.cache.get(day.date);
+  const res = await fetch(`${DATA_DIR}${day.file}?v=${Date.now()}`);
+  if (!res.ok) throw new Error(`${day.file}: HTTP ${res.status}`);
+  const rows = parseCSV((await res.text()).trim());
+  const idx = Object.fromEntries(rows[0].map((h, i) => [h.trim(), i]));
+  for (const k of ["type", "airport", "firstSeen", "lastSeen"]) if (idx[k] === undefined) throw new Error(`Brak kolumny ${k} w ${day.file}`);
+  const flights = []; let outside = 0;
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const type = row[idx.type], ap = row[idx.airport];
+    if (!AIRPORTS[ap] || (type !== "arrival" && type !== "departure")) continue;
+    const ts = Number(type === "arrival" ? row[idx.lastSeen] : row[idx.firstSeen]);
+    if (!ts) continue;
+    const { date, hour } = localParts(ts);
+    if (date !== day.date) { outside++; continue; } // czas spoza dnia (np. błąd starego eksportu)
+    const other = type === "arrival" ? row[idx.estDepartureAirport] : row[idx.estArrivalAirport];
+    let o = (other || "").trim().toUpperCase();
+    if (o === ap) o = ""; // start i lądowanie na tym samym lotnisku (np. lot szkoleniowy): brak trasy
+    flights.push({ type, ap, hour, other: o });
+  }
+  const data = { flights, outside };
+  state.cache.set(day.date, data);
+  return data;
+}
+
+// ---------- obliczenia ----------
+const dirOk = (f) => state.dir === "all" || f.type === state.dir;
+const visibleFlights = () => state.flights.filter((f) => dirOk(f) && inWindow(f.hour));
+
+function countsByAirport(list) {
+  const c = {};
+  for (const icao of Object.keys(AIRPORTS)) c[icao] = { departure: 0, arrival: 0, total: 0 };
+  for (const f of list) { c[f.ap][f.type]++; c[f.ap].total++; }
+  return c;
+}
+
+function arc(a, b, n = 28) {
+  const [lat1, lon1] = a, [lat2, lon2] = b;
+  const mx = (lat1 + lat2) / 2, my = (lon1 + lon2) / 2, dx = lat2 - lat1, dy = lon2 - lon1;
+  const cx = mx - dy * 0.18, cy = my + dx * 0.18;
+  const pts = [];
+  for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; pts.push([u*u*lat1 + 2*u*t*cx + t*t*lat2, u*u*lon1 + 2*u*t*cy + t*t*lon2]); }
+  return pts;
+}
+
+// ---------- podpowiedź (tooltip) dla elementów panelu ----------
+const tip = $("tip");
+function showTip(html, x, y) {
+  tip.innerHTML = html; tip.style.display = "block";
+  const r = tip.getBoundingClientRect();
+  tip.style.left = `${Math.min(window.innerWidth - r.width - 8, Math.max(8, x - r.width / 2))}px`;
+  tip.style.top = `${Math.max(8, y - r.height - 10)}px`;
+}
+const hideTip = () => { tip.style.display = "none"; };
+
+// ---------- rysowanie ----------
+function render() {
+  if (!state.day) return;
+  const list = visibleFlights();
+  const counts = countsByAirport(list);
+  $("rangeLabel").textContent = state.from === 0 && state.to === 23 ? "cała doba"
+    : `${pad(state.from)}:00–${pad(state.to)}:59`;
+  renderMap(list, counts);
+  renderKpis(list);
+  renderHistogram();
+  renderRanking(counts);
+  renderDetail();
+}
+
+// ---------- wybór godzin na wykresie ----------
+const HIST = { W: 324, H: 92, gap: 2, bw: (324 - 2 * 23) / 24, dep: [], arr: [] };
+
+function hourAt(e) {
+  const r = $("hist").getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * HIST.W;
+  return Math.max(0, Math.min(23, Math.floor(x / (HIST.bw + HIST.gap))));
+}
+
+function setupHistogram() {
+  const svg = $("hist");
+  let anchor = null;
+  const tipFor = (h, e) => showTip(
+    `<b>${pad(h)}:00–${pad(h)}:59</b><br><span style="color:${css("--dep")}">●</span> odloty ${HIST.dep[h]} · <span style="color:${css("--arr")}">●</span> przyloty ${HIST.arr[h]}`,
+    e.clientX, e.clientY);
+
+  svg.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    svg.setPointerCapture(e.pointerId);
+    anchor = hourAt(e);
+    stopPlay();
+    setHours(anchor, anchor);
+  });
+  svg.addEventListener("pointermove", (e) => {
+    const h = hourAt(e);
+    if (anchor === null) { if (e.pointerType === "mouse") tipFor(h, e); return; }
+    hideTip(); // podczas przeciągania podpowiedź zasłaniałaby wykres
+    const a = Math.min(anchor, h), b = Math.max(anchor, h);
+    if (a !== state.from || b !== state.to) setHours(a, b);
+  });
+  const end = () => { anchor = null; };
+  svg.addEventListener("pointerup", end);
+  svg.addEventListener("pointercancel", end);
+  svg.addEventListener("pointerleave", hideTip);
+
+  // Klawiatura: strzałki przesuwają zakres, Shift+strzałki go rozszerzają/zwężają, Home/End = cała doba.
+  svg.addEventListener("keydown", (e) => {
+    let { from, to } = state;
+    const len = from <= to ? to - from : 24 - from + to;
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const d = e.key === "ArrowRight" ? 1 : -1;
+      if (e.shiftKey) to = Math.max(from, Math.min(23, to + d));
+      else { from = (from + d + 24) % 24; to = (from + len) % 24; }
+    } else if (e.key === "Home" || e.key === "End") { from = 0; to = 23; }
+    else return;
+    e.preventDefault();
+    stopPlay();
+    setHours(from, to);
+  });
+
+  document.querySelectorAll(".preset").forEach((b) => b.addEventListener("click", () => {
+    stopPlay();
+    setHours(Number(b.dataset.from), Number(b.dataset.to));
+  }));
+}
+
+function renderMap(list, counts) {
+  const dark = isDark();
+  // Heatmapa (pierwiastek z liczby lotów, żeby małe lotniska były widoczne obok WAW).
+  const max = Math.max(1, ...Object.values(counts).map((c) => c.total));
+  if (map.getSize().x > 0) {
+    heatLayer.setOptions({ max: Math.sqrt(max), gradient: heatGradient() });
+    heatLayer.setLatLngs(Object.entries(counts).filter(([, c]) => c.total > 0)
+      .map(([icao, c]) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon, Math.sqrt(c.total)]));
+  }
+
+  renderRoutes(list, dark); // trasy przed lotniskami, żeby kółka były na wierzchu
+
+  // Lotniska: okrągła plakietka z kodem IATA i liczbą lotów w środku.
+  // Rozmiar = pierwiastek z liczby lotów, kolor wnętrza = skala sekwencyjna,
+  // pierścień = podział na odloty (pomarańczowy) i przyloty (niebieski).
+  circleLayer.clearLayers();
+  const far = map.getZoom() < 5.5; // przy oddaleniu mniejsze plakietki, żeby się nie nakładały
+  for (const [icao, a] of Object.entries(AIRPORTS)) {
+    const c = counts[icao];
+    const sel = icao === state.selected;
+    let size = c.total ? 30 + Math.sqrt(c.total) * 2.1 : 24;
+    if (far) size = Math.max(18, size * 0.6);
+    const depPct = c.total ? (c.departure / c.total) * 100 : 0;
+    const fill = seqColor(c.total);
+    const ink = c.total ? inkFor(fill) : css("--text-2");
+    const showCount = !far && size >= 36;
+    const showCode = !far || c.total >= max * 0.4;
+    const ringBg = c.total
+      ? `conic-gradient(var(--dep) 0 ${depPct}%, var(--arr) ${depPct}% 100%)`
+      : "var(--zero)";
+    const html = `<div class="ap${sel ? " sel" : ""}${c.total ? "" : " empty"}" style="width:${size}px;height:${size}px;background:${ringBg}">
+        <div class="ap-in" style="background:${fill};color:${ink}">
+          ${showCode ? `<b>${a.iata}</b>` : ""}${showCount ? `<span>${fmt(c.total)}</span>` : ""}
+        </div></div>`;
+    const m = L.marker([a.lat, a.lon], {
+      icon: L.divIcon({ html, className: "ap-icon", iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+      zIndexOffset: sel ? 10000 : -c.total, // mniejsze na wierzchu, żeby nie znikały pod WAW
+      title: `${a.name}: ${c.total} lotów`, keyboard: true, riseOnHover: true,
+    });
+    m.bindTooltip(
+      `<b>${esc(a.name)} (${a.iata})</b><br><span style="color:${css("--dep")}">●</span> odloty ${c.departure} · <span style="color:${css("--arr")}">●</span> przyloty ${c.arrival}`,
+      { direction: "top", offset: [0, -size / 2] });
+    m.on("click", () => selectAirport(icao));
+    m.addTo(circleLayer);
+  }
+}
+
+// Trasy (obie strony razem dla pary lotnisk).
+function renderRoutes(list, dark) {
+  routeLayer.clearLayers();
+  const pairs = new Map();
+  for (const f of list) if (f.other) { const k = `${f.ap}|${f.other}`; pairs.set(k, (pairs.get(k) || 0) + 1); }
+  const color = state.dir === "arrival" ? css("--arr") : state.dir === "departure" ? css("--dep") : (dark ? "#9085e9" : "#6250d6");
+  let routes = 0;
+  const sorted = [...pairs].sort((a, b) => a[1] - b[1]); // grube na wierzchu
+  for (const [k, n] of sorted) {
+    const [ap, other] = k.split("|");
+    const to = AIRPORTS[other] ? [AIRPORTS[other].lat, AIRPORTS[other].lon] : state.coords[other]?.slice(0, 2);
+    if (!to) continue;
+    routes++;
+    const dim = state.selected && state.selected !== ap;
+    L.polyline(arc([AIRPORTS[ap].lat, AIRPORTS[ap].lon], to), {
+      color, weight: 0.8 + Math.log2(n + 1) * 1.1, opacity: dim ? 0.06 : 0.22 + Math.min(n / 12, 0.5),
+      lineCap: "round",
+    }).bindTooltip(`${esc(airportLabel(ap, true))} ⇄ ${esc(airportLabel(other))}: <b>${n}</b>`, { sticky: true })
+      .on("click", () => selectAirport(ap)).addTo(routeLayer);
+  }
+  state.routes = routes;
+}
+
+function renderKpis(list) {
+  const dep = list.filter((f) => f.type === "departure").length;
+  const arr = list.length - dep;
+  const dests = new Set(list.filter((f) => f.other).map((f) => f.other));
+  $("kTotal").textContent = fmt(list.length);
+  $("kDep").textContent = fmt(dep);
+  $("kArr").textContent = fmt(arr);
+  $("kRoutes").textContent = fmt(dests.size);
+}
+
+function renderHistogram() {
+  const svg = $("hist");
+  const src = state.flights.filter((f) => !state.selected || f.ap === state.selected);
+  const dep = new Array(24).fill(0), arr = new Array(24).fill(0);
+  for (const f of src) (f.type === "arrival" ? arr : dep)[f.hour]++;
+  const showDep = state.dir !== "arrival", showArr = state.dir !== "departure";
+  const tot = dep.map((d, h) => (showDep ? d : 0) + (showArr ? arr[h] : 0));
+  const max = Math.max(1, ...tot);
+  const { W, H, gap, bw } = HIST;
+  const y = (v) => (v / max) * (H - 6);
+  let out = "";
+  // Zaznaczony zakres: tło pod słupkami + uchwyty na krawędziach (zakres przez północ = dwa pasy).
+  if (!(state.from === 0 && state.to === 23)) {
+    const segs = state.from <= state.to ? [[state.from, state.to]] : [[state.from, 23], [0, state.to]];
+    for (const [a, b] of segs) {
+      const x0 = a * (bw + gap) - gap / 2, x1 = b * (bw + gap) + bw + gap / 2;
+      out += `<rect class="band" x="${x0}" y="0" width="${x1 - x0}" height="${H}" rx="4"/>`;
+    }
+    const hx = (h, right) => h * (bw + gap) + (right ? bw + gap / 2 : -gap / 2);
+    out += `<rect class="handle" x="${hx(state.from, false) - 1.5}" y="0" width="3" height="${H}" rx="1.5"/>`;
+    out += `<rect class="handle" x="${hx(state.to, true) - 1.5}" y="0" width="3" height="${H}" rx="1.5"/>`;
+  }
+  out += `<line class="base" x1="0" x2="${W}" y1="${H + 0.5}" y2="${H + 0.5}"/>`;
+  for (let h = 0; h < 24; h++) {
+    const x = h * (bw + gap);
+    const op = inWindow(h) ? 1 : 0.28;
+    const a = showArr ? y(arr[h]) : 0, d = showDep ? y(dep[h]) : 0;
+    // przyloty na dole, odloty nad nimi, 2px odstępu między segmentami
+    if (a > 0) out += `<rect x="${x}" y="${H - a}" width="${bw}" height="${a}" rx="2" fill="var(--arr)" opacity="${op}"/>`;
+    if (d > 0) out += `<rect x="${x}" y="${H - a - d - (a > 0 ? gap : 0)}" width="${bw}" height="${d}" rx="2" fill="var(--dep)" opacity="${op}"/>`;
+    if (h % 3 === 0) out += `<text class="axis" x="${x + bw / 2}" y="${H + 12}" text-anchor="middle">${pad(h)}</text>`;
+  }
+  svg.innerHTML = out;
+  HIST.dep = dep; HIST.arr = arr;
+  svg.setAttribute("aria-valuenow", state.from);
+  svg.setAttribute("aria-valuetext", $("rangeLabel").textContent);
+  document.querySelectorAll(".preset").forEach((b) =>
+    b.setAttribute("aria-pressed", String(+b.dataset.from === state.from && +b.dataset.to === state.to)));
+  $("histTitle").textContent = state.selected ? `Loty na godzinę · ${AIRPORTS[state.selected].iata}` : "Loty na godzinę";
+}
+
+function renderRanking(counts) {
+  const items = Object.entries(counts).sort((a, b) => b[1].total - a[1].total);
+  const max = Math.max(1, ...items.map(([, c]) => c.total));
+  $("rank").innerHTML = items.map(([icao, c]) => {
+    const a = AIRPORTS[icao];
+    const d = (c.departure / max) * 100, r = (c.arrival / max) * 100;
+    return `<li><button data-icao="${icao}" aria-pressed="${icao === state.selected}" title="${esc(a.name)}: odloty ${c.departure}, przyloty ${c.arrival}">
+      <span class="code">${a.iata}</span>
+      <span><span class="name">${esc(a.name)}</span>
+        <span class="track">${d ? `<i class="dep" style="width:${d}%"></i>` : ""}${r ? `<i class="arr" style="width:${r}%"></i>` : ""}</span></span>
+      <span class="num">${fmt(c.total)}</span></button></li>`;
+  }).join("");
+  $("rank").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    const icao = b.dataset.icao;
+    if (state.selected === icao) clearSelection(); else selectAirport(icao, true);
+  }));
+}
+
+function renderDetail() {
+  const box = $("detail");
+  if (!state.selected) { box.classList.remove("open"); return; }
+  const icao = state.selected, a = AIRPORTS[icao];
+  const inRange = state.flights.filter((f) => f.ap === icao && inWindow(f.hour) && dirOk(f));
+  const dep = inRange.filter((f) => f.type === "departure").length;
+  $("dName").textContent = `${a.name} (${a.iata})`;
+  $("dSub").textContent = `${fmt(dep)} odlotów · ${fmt(inRange.length - dep)} przylotów w wybranych godzinach`;
+  const dests = new Map();
+  for (const f of inRange) if (f.other) dests.set(f.other, (dests.get(f.other) || 0) + 1);
+  const top = [...dests].sort((x, y) => y[1] - x[1]).slice(0, 6);
+  const max = top[0]?.[1] || 1;
+  $("dDests").innerHTML = top.length ? top.map(([k, n]) =>
+    `<li><div><div class="lbl">${esc(airportLabel(k))}</div><div class="bar" style="width:${(n / max) * 100}%"></div></div><span class="n">${n}</span></li>`
+  ).join("") : `<li style="color:var(--text-3)">Brak lotów w wybranych godzinach.</li>`;
+  box.classList.add("open");
+}
+
+function selectAirport(icao, fly = false) {
+  state.selected = icao;
+  render();
+  if (fly) map.flyTo([AIRPORTS[icao].lat, AIRPORTS[icao].lon], Math.max(map.getZoom(), 7), { duration: 0.6 });
+  if (window.matchMedia("(max-width: 820px)").matches) $("detail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+function clearSelection() { state.selected = null; render(); }
+
+// ---------- sterowanie ----------
+function setHours(from, to, fromPlay = false) {
+  state.from = from; state.to = to;
+  if (!fromPlay) stopPlay();
+  render();
+}
+
+function stopPlay() {
+  if (!state.playing) return;
+  clearInterval(state.playing); state.playing = null;
+  $("playTxt").textContent = "Animuj dobę";
+  $("playIcon").innerHTML = '<path d="M6 4l15 8-15 8z"/>';
+  $("playBtn").setAttribute("aria-pressed", "false");
+}
+
+function togglePlay() {
+  if (state.playing) return stopPlay();
+  let h = state.from === state.to ? (state.from + 1) % 24 : 0;
+  const step = () => { setHours(h, h, true); h = (h + 1) % 24; };
+  step();
+  state.playing = setInterval(step, 900);
+  $("playTxt").textContent = "Zatrzymaj";
+  $("playIcon").innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+  $("playBtn").setAttribute("aria-pressed", "true");
+}
+
+async function chooseDay(date) {
+  const day = state.days.find((d) => d.date === date);
+  if (!day) return;
+  try {
+    const data = await loadDay(day);
+    state.day = day; state.flights = data.flights; state.outside = data.outside;
+    const url = new URL(location.href); url.searchParams.set("day", date); history.replaceState(null, "", url);
+    $("srcName").textContent = day.source === "opensky" ? "OpenSky Network" : day.source === "aerodatabox" ? "AeroDataBox" : day.source;
+    const notes = [];
+    if (data.outside) notes.push(`${data.outside} lotów ma czas spoza tego dnia i zostało pominiętych.`);
+    if (day.missing?.length) notes.push(`Brak części danych: ${day.missing.join(", ")}.`);
+    if (day.note) notes.push(day.note);
+    $("note").textContent = notes.join(" ");
+    render();
+  } catch (e) {
+    $("note").innerHTML = `<span class="error">${esc(e.message)}</span>`;
+  }
+}
+
+function toggleLayer(id, layer) {
+  if ($(id).checked) layer.addTo(map); else map.removeLayer(layer);
+  render();
+}
+
+// ---------- motyw ----------
+// Stonowany, szary podkład Esri (bez klucza API), żeby dane były najbardziej widoczne.
+let labels;
+function applyTiles() {
+  const v = isDark() ? "Dark" : "Light";
+  const base = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${v}_Gray_Base/MapServer/tile/{z}/{y}/{x}`;
+  const ref = `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${v}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`;
+  if (tiles) { tiles.setUrl(base); labels.setUrl(ref); return; }
+  tiles = L.tileLayer(base, { attribution: "Podkład © Esri, HERE, Garmin, © OpenStreetMap", maxZoom: 16 }).addTo(map);
+  labels = L.tileLayer(ref, { maxZoom: 16 }).addTo(map);
+}
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("theme", t); } catch (e) {}
+  applyTiles(); render(); legend.remove(); legend.addTo(map);
+}
+try { const t = localStorage.getItem("theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+
+// ---------- start ----------
+let legend;
+async function init() {
+  map = L.map("map", { zoomSnap: 0.5, zoomControl: false });
+  L.control.zoom({ position: "topright" }).addTo(map);
+  map.fitBounds(Object.values(AIRPORTS).map((a) => [a.lat, a.lon]), { padding: [40, 40] });
+  applyTiles();
+
+  heatLayer = L.heatLayer ? L.heatLayer([], { radius: 55, blur: 38, minOpacity: 0.4, maxZoom: 0 /* pełna intensywność przy każdym przybliżeniu */, gradient: heatGradient() }) : L.layerGroup();
+  if (!heatLayer.setLatLngs) { heatLayer.setLatLngs = () => {}; heatLayer.setOptions = () => {}; }
+  routeLayer = L.layerGroup();
+  circleLayer = L.layerGroup();
+  // Kolejność warstw: heatmapa pod spodem, trasy, lotniska na wierzchu.
+  requestAnimationFrame(() => { map.invalidateSize(); heatLayer.addTo(map); circleLayer.addTo(map); render(); });
+
+  legend = L.control({ position: "bottomright" });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create("div", "map-legend");
+    // Jedna skala dla heatmapy i plakietek: kolor = natężenie ruchu.
+    div.innerHTML = `<h4>Loty na lotnisku</h4>
+      <div class="ramp">${badgeStops().map((c) => `<i style="background:${c}"></i>`).join("")}</div>
+      <div class="ticks">${SEQ.filter((_, i) => i % 2 === 0 || i === SEQ.length - 1).map((s) => `<span>${s.label}</span>`).join("")}</div>
+      <div class="ring-legend"><span class="ring-demo"></span>pierścień: <i class="dot dep"></i>odloty <i class="dot arr"></i>przyloty</div>`;
+    return div;
+  };
+  legend.addTo(map);
+
+  setupHistogram();
+  $("playBtn").addEventListener("click", togglePlay);
+  $("daySelect").addEventListener("change", (e) => chooseDay(e.target.value));
+  document.querySelectorAll('input[name="dir"]').forEach((r) => r.addEventListener("change", (e) => { state.dir = e.target.value; render(); }));
+  $("layerHeat").addEventListener("change", () => toggleLayer("layerHeat", heatLayer));
+  $("layerCircles").addEventListener("change", () => toggleLayer("layerCircles", circleLayer));
+  $("layerRoutes").addEventListener("change", () => {
+    toggleLayer("layerRoutes", routeLayer);
+    if ($("layerRoutes").checked && map.getZoom() > 4.5) map.flyTo([50, 14], 4, { duration: 0.8 });
+  });
+  $("dClose").addEventListener("click", clearSelection);
+  let lastZoomBand = null;
+  map.on("zoomend", () => { const b = map.getZoom() < 5.5; if (b !== lastZoomBand) { lastZoomBand = b; render(); } });
+  $("themeBtn").addEventListener("click", () => setTheme(isDark() ? "light" : "dark"));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.selected) clearSelection(); });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { applyTiles(); render(); });
+
+  try {
+    const [index, coords] = await Promise.all([
+      fetchJSON(`${DATA_DIR}index.json`),
+      fetchJSON(`${DATA_DIR}airports_coords.json`).catch(() => ({})),
+    ]);
+    state.coords = coords;
+    state.days = index.days || [];
+    if (!state.days.length) throw new Error("Brak zapisanych dni w data/index.json. Uruchom eksport: start.bat export");
+    const sel = $("daySelect");
+    sel.innerHTML = state.days.map((d) => `<option value="${esc(d.date)}">${esc(dayName(d.date))} · ${fmt(d.rows)} lotów</option>`).join("");
+    sel.disabled = false;
+    const wanted = new URL(location.href).searchParams.get("day");
+    const first = state.days.some((d) => d.date === wanted) ? wanted : state.days[0].date;
+    sel.value = first;
+    await chooseDay(first);
+  } catch (e) {
+    const hint = location.protocol === "file:" ? " Otwórz stronę przez serwer (start.bat), a nie bezpośrednio z pliku." : "";
+    $("note").innerHTML = `<span class="error">${esc(e.message)}.${hint}</span>`;
+  }
+}
+
+if (window.L) init();
+else document.body.insertAdjacentHTML("afterbegin", '<p class="error" style="padding:16px">Nie udało się wczytać biblioteki mapy (Leaflet). Sprawdź internet i odśwież.</p>');
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Skopiuj ten plik jako api_key.txt i wpisz swoje dane.
+# api_key.txt jest w .gitignore, więc nie trafi do repozytorium.
+
+# OpenSky Network (zalecane, darmowe): opensky-network.org -> Account -> API client
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=
+
+# AeroDataBox przez API.Market (opcjonalnie, wymaga aktywnej subskrypcji)
+API_MARKET_KEY=

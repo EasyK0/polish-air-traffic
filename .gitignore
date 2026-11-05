@@ -1,0 +1,17 @@
+# Klucze API - nigdy do repo
+api_key.txt
+.env
+
+# Pliki tymczasowe eksportu
+data/*.partial.csv
+*_checkpoint_*.csv
+
+# Stare pliki sprzed przebudowy
+current_csv.txt
+flights_latest.csv
+
+node_modules/
+
+# Lokalne
+.claude/
+data/archiwum/
