@@ -2,6 +2,10 @@
 
 All notable changes to Polish Air Traffic Map. Adding a new version at the top publishes a GitHub release for it. Daily data commits (`Dane: YYYY-MM-DD`) are not listed.
 
+## [Unreleased]
+
+- MIT licence for the code (`LICENSE`), mentioned in both READMEs. Flight data, airport coordinates and the basemap keep their own terms.
+
 ## [1.0.0] - 2026-11-08
 
 First release of the map as it runs on the [live demo](https://easyk0.github.io/polish-air-traffic/).

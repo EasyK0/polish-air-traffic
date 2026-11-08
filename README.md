@@ -81,6 +81,7 @@ Workflow [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.y
 
 ## Dane i licencje
 
+- Kod: licencja [MIT](LICENSE).
 - Loty: [OpenSky Network](https://opensky-network.org) (do zastosowań niekomercyjnych i badawczych). Lotniska docelowe są szacowane z sygnałów ADS-B, więc część lotów nie ma ustalonego celu.
 - Współrzędne lotnisk: [OurAirports](https://ourairports.com/data/) (domena publiczna).
 - Podkład mapy: Esri World Gray Canvas, © OpenStreetMap.

@@ -83,6 +83,7 @@ The [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.yml) w
 
 ## Data and licences
 
+- Code: [MIT licence](LICENSE).
 - Flights: [OpenSky Network](https://opensky-network.org) (non-commercial and research use). Destination airports are estimated from ADS-B signals, so some flights have no known destination.
 - Airport coordinates: [OurAirports](https://ourairports.com/data/) (public domain).
 - Basemap: Esri World Gray Canvas, © OpenStreetMap.
