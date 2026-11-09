@@ -4,7 +4,7 @@ All notable changes to Polish Air Traffic Map. Adding a new version at the top p
 
 ## [Unreleased]
 
-- Heatmap and airport badges are coloured by average flights per hour in the selected hours instead of the total, on a new scale (1, 4, 8, 15, 30, 45+ per hour). Before, the total grew with the number of selected hours, so for the whole day Warsaw, Kraków and Gdańsk were red every day; now red means 30+ flights in an hour (Warsaw's busiest hours), and the whole day shows Warsaw orange, Kraków and Gdańsk yellow. Legend title says "per hour".
+- Heatmap and airport badges are coloured by average flights per hour in the selected hours instead of the total, instead of the total. Before, the total grew with the number of selected hours, so for the whole day Warsaw, Kraków and Gdańsk were red every day. The top of the scale is no longer fixed: it is 1.3 × the 99th percentile of flights per airport per hour in the loaded day (about 40-45 in Poland, thresholds 1, 4, 7-8, 15, 25-30, 40-45+), so with more airports (e.g. a world view) red still means only the busiest hubs at their peak. Now the whole day shows Warsaw orange, Kraków and Gdańsk yellow, and red appears only in Warsaw's busiest hours. Legend title says "per hour" and its labels follow the day's scale.
 - MIT licence for the code (`LICENSE`), mentioned in both READMEs. Flight data, airport coordinates and the basemap keep their own terms.
 
 ## [1.0.0] - 2026-11-08

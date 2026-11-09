@@ -370,18 +370,17 @@ const AIRPORTS = {
 
 // Progi natężenia ruchu: LOTY NA GODZINĘ (średnio w wybranych godzinach), nie suma lotów.
 // Suma rosła z liczbą zaznaczonych godzin, więc przy całym dniu Warszawa (~450), Kraków (~200)
-// i Gdańsk (~130) zawsze były czerwone. Progi z danych z listopada 2026: Warszawa ma zwykle
-// ~24 loty/h (najwięcej ~40), Kraków ~11 (do ~25), reszta lotnisk poniżej ~15. Czerwony = 30+/h.
+// i Gdańsk (~130) zawsze były czerwone.
+// Górna granica skali NIE jest wpisana na sztywno: liczy ją setScale() z danych wczytanego dnia
+// (1,3 × 99. percentyl lotów na godzinę na lotnisko). Dla Polski wychodzi ok. 40-46 lotów/h
+// (Warszawa ma zwykle ~24/h, najwięcej ~40), a przy danych z całego świata granica sama
+// przesunie się w górę, więc czerwone będą tylko największe huby w godzinach szczytu.
+// Progi to stałe ułamki górnej granicy (dla 45: 1, 4, 8, 15, 30, 45).
+const SEQ_FRACTIONS = [1 / 45, 4 / 45, 8 / 45, 15 / 45, 30 / 45, 1];
+const SCALE_MIN_TOP = 10; // przy bardzo małym ruchu skala i tak sięga co najmniej 10 lotów/h
 // Kolor plakietki bierze się z tej samej skali co heatmapa
 // (zielony -> żółty -> pomarańczowy -> czerwony), więc plakietka ma kolor plamy pod nią.
-const SEQ = [
-  { min: 1,  label: "1"   },
-  { min: 4,  label: "4"   },
-  { min: 8,  label: "8"   },
-  { min: 15, label: "15"  },
-  { min: 30, label: "30"  },
-  { min: 45, label: "45+" },
-];
+let SEQ = [];
 // Zielony = mały ruch, czerwony = największy (w obu motywach).
 // Liczby na plakietkach są drugim nośnikiem informacji dla osób nierozróżniających zieleni i czerwieni.
 const BADGE_STOPS = ["#22c55e", "#a3e635", "#facc15", "#fb923c", "#ef4444", "#b91c1c"];
@@ -524,13 +523,32 @@ function localParts(ts) {
 }
 const inWindow = (h) => state.from <= state.to ? h >= state.from && h <= state.to : h >= state.from || h <= state.to;
 
-// Wspólna, BEZWZGLĘDNA skala dla heatmapy i plakietek: loty na godzinę -> t (0..1) w skali
-// logarytmicznej, 45+ lotów/h = 1. Ten sam ruch ma zawsze ten sam kolor, niezależnie od tego,
-// ile godzin jest zaznaczonych (wcześniej heatmapa normalizowała do bieżącego maksimum, a potem
-// liczyła sumę lotów, więc cały dzień zawsze świecił na czerwono).
-const SCALE_MAX = SEQ[SEQ.length - 1].min;
+// Wspólna skala dla heatmapy i plakietek: loty na godzinę -> t (0..1) w skali logarytmicznej,
+// górna granica = 1. W obrębie dnia ten sam ruch ma zawsze ten sam kolor, niezależnie od tego,
+// ile godzin jest zaznaczonych (granica liczona z całego dnia, a nie z zaznaczonych godzin, więc
+// 20 lotów w nocy nie świeci na czerwono, jak przy dawnej normalizacji do bieżącego maksimum).
+let SCALE_MAX = 45;
+let STOP_POS = [];
 const tOf = (n) => (n <= 0 ? 0 : Math.min(1, Math.log1p(n) / Math.log1p(SCALE_MAX)));
-const STOP_POS = SEQ.map((s) => tOf(s.min)); // pozycje kolorów na skali: 1, 4, 8, 15, 30, 45
+// Zaokrąglenie progu do "ładnej" liczby na legendzie: 1-9 bez zmian, potem co 5, od 100 co 10.
+const niceStep = (x) => (x < 10 ? Math.max(1, Math.round(x)) : x < 100 ? Math.round(x / 5) * 5 : Math.round(x / 10) * 10);
+
+function setScale(flights) {
+  const perAirportHour = new Map();
+  for (const f of flights) { const k = f.ap + "|" + f.hour; perAirportHour.set(k, (perAirportHour.get(k) || 0) + 1); }
+  const hours = [...perAirportHour.values()].sort((a, b) => a - b);
+  const p99 = hours.length ? hours[Math.min(hours.length - 1, Math.floor(0.99 * hours.length))] : 0;
+  const top = Math.max(SCALE_MIN_TOP, niceStep(1.3 * p99));
+  SEQ = [];
+  for (const fr of SEQ_FRACTIONS) {
+    const prev = SEQ.length ? SEQ[SEQ.length - 1].min : 0;
+    SEQ.push({ min: Math.max(prev + 1, niceStep(fr * top)), label: "" });
+  }
+  SEQ.forEach((s, i) => { s.label = i === SEQ.length - 1 ? `${s.min}+` : String(s.min); });
+  SCALE_MAX = SEQ[SEQ.length - 1].min;
+  STOP_POS = SEQ.map((s) => tOf(s.min));
+}
+setScale([]); // skala domyślna, zanim wczyta się pierwszy dzień
 // Liczba zaznaczonych godzin (zakres może przechodzić przez północ, np. 22–5).
 const hoursSelected = () => (state.from <= state.to ? state.to - state.from + 1 : 24 - state.from + state.to + 1);
 const perHour = (total) => total / hoursSelected();
@@ -897,6 +915,8 @@ async function chooseDay(date) {
   try {
     const data = await loadDay(day);
     state.day = day; state.flights = data.flights; state.outside = data.outside;
+    setScale(data.flights);
+    if (legend) { legend.remove(); legend.addTo(map); } // progi na legendzie zależą od dnia
     const url = new URL(location.href); url.searchParams.set("day", date); history.replaceState(null, "", url);
     $("srcName").textContent = day.source === "opensky" ? "OpenSky Network" : day.source === "aerodatabox" ? "AeroDataBox" : day.source;
     updateNotes();
@@ -961,7 +981,7 @@ async function init() {
     // Jedna skala dla heatmapy i plakietek: kolor = natężenie ruchu.
     div.innerHTML = `<h4>${t("legendTitle")}</h4>
       <div class="heatbar" style="background:linear-gradient(90deg,${BADGE_STOPS.map((c, i) => `${c} ${(STOP_POS[i] * 100).toFixed(1)}%`).join(",")})"></div>
-      <div class="ticks abs">${SEQ.filter((s) => [1, 4, 15, 45].includes(s.min)).map((s) => `<span style="left:${(tOf(s.min) * 100).toFixed(1)}%">${s.label}</span>`).join("")}</div>
+      <div class="ticks abs">${SEQ.filter((s, i) => [0, 1, 3, 5].includes(i)).map((s) => `<span style="left:${(tOf(s.min) * 100).toFixed(1)}%">${s.label}</span>`).join("")}</div>
       <div class="ring-legend"><span class="ring-demo"></span>${t("ring")}: <i class="dot dep"></i>${t("departures")} <i class="dot arr"></i>${t("arrivals")}</div>`;
     return div;
   };
