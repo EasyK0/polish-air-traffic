@@ -12,7 +12,7 @@ Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężen
 
 ## Funkcje
 
-- **Heatmapa i plakietki lotnisk:** kolor od zielonego (mały ruch) do czerwonego (duży), kod IATA i liczba lotów na plakietce, pierścień z podziałem na odloty i przyloty.
+- **Heatmapa i plakietki lotnisk:** kolor według średniej liczby lotów na godzinę w wybranych godzinach, od zielonego (mały ruch) do czerwonego (30+ lotów/h, czyli tylko naprawdę duży ruch), kod IATA i liczba lotów na plakietce, pierścień z podziałem na odloty i przyloty.
 - **Trasy:** łuki do lotnisk docelowych, grubość zależy od liczby lotów (współrzędne ~5900 lotnisk z OurAirports).
 - **Wybór godzin:** przeciągnięcie po wykresie godzinowym, gotowe pory dnia (rano, popołudnie, wieczór, noc) albo animacja całej doby.
 - **Filtr kierunku:** wszystkie loty, same odloty albo same przyloty.

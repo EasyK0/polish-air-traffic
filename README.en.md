@@ -12,7 +12,7 @@ An interactive map of air traffic at 15 Polish airports: traffic heatmap, routes
 
 ## Features
 
-- **Heatmap and airport badges:** colour from green (low traffic) to red (high), IATA code and flight count on each badge, a ring showing the departure/arrival split.
+- **Heatmap and airport badges:** colour by average flights per hour in the selected hours, from green (low traffic) to red (30+ flights/h, so only really heavy traffic), IATA code and flight count on each badge, a ring showing the departure/arrival split.
 - **Routes:** arcs to destination airports, line width by number of flights (coordinates of ~5,900 airports from OurAirports).
 - **Hour selection:** drag across the hourly chart, pick a time of day (morning, afternoon, evening, night) or animate the whole day.
 - **Direction filter:** all flights, departures only or arrivals only.

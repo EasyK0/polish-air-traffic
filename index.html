@@ -368,15 +368,19 @@ const AIRPORTS = {
   EPRA: { iata: "RDO", name: "Radom",               lat: 51.3890, lon: 21.2133 },
 };
 
-// Progi liczby lotów na lotnisku. Kolor plakietki bierze się z tej samej skali co heatmapa
+// Progi natężenia ruchu: LOTY NA GODZINĘ (średnio w wybranych godzinach), nie suma lotów.
+// Suma rosła z liczbą zaznaczonych godzin, więc przy całym dniu Warszawa (~450), Kraków (~200)
+// i Gdańsk (~130) zawsze były czerwone. Progi z danych z listopada 2026: Warszawa ma zwykle
+// ~24 loty/h (najwięcej ~40), Kraków ~11 (do ~25), reszta lotnisk poniżej ~15. Czerwony = 30+/h.
+// Kolor plakietki bierze się z tej samej skali co heatmapa
 // (zielony -> żółty -> pomarańczowy -> czerwony), więc plakietka ma kolor plamy pod nią.
 const SEQ = [
-  { min: 1,   label: "1"    },
-  { min: 10,  label: "10"   },
-  { min: 25,  label: "25"   },
-  { min: 50,  label: "50"   },
-  { min: 100, label: "100"  },
-  { min: 250, label: "250+" },
+  { min: 1,  label: "1"   },
+  { min: 4,  label: "4"   },
+  { min: 8,  label: "8"   },
+  { min: 15, label: "15"  },
+  { min: 30, label: "30"  },
+  { min: 45, label: "45+" },
 ];
 // Zielony = mały ruch, czerwony = największy (w obu motywach).
 // Liczby na plakietkach są drugim nośnikiem informacji dla osób nierozróżniających zieleni i czerwieni.
@@ -418,7 +422,7 @@ const I18N = {
     layers: "Warstwy", heatmap: "Heatmapa", airports: "Lotniska", routes: "Trasy",
     closeDetail: "Zamknij szczegóły lotniska", inSelectedHours: "w wybranych godzinach",
     data: "Dane", basemap: "podkład", mapAria: "Mapa lotnisk",
-    flightsWord: "lotów", legendTitle: "Loty na lotnisku", ring: "pierścień",
+    flightsWord: "lotów", legendTitle: "Loty na godzinę (średnio)", ring: "pierścień",
     detailSub: "{dep} odlotów · {arr} przylotów w wybranych godzinach",
     noFlights: "Brak lotów w wybranych godzinach.",
     noteOutside: "{n} lotów ma czas spoza tego dnia i zostało pominiętych.",
@@ -442,7 +446,7 @@ const I18N = {
     layers: "Layers", heatmap: "Heatmap", airports: "Airports", routes: "Routes",
     closeDetail: "Close airport details", inSelectedHours: "in selected hours",
     data: "Data", basemap: "basemap", mapAria: "Airport map",
-    flightsWord: "flights", legendTitle: "Flights per airport", ring: "ring",
+    flightsWord: "flights", legendTitle: "Flights per hour (average)", ring: "ring",
     detailSub: "{dep} departures · {arr} arrivals in selected hours",
     noFlights: "No flights in the selected hours.",
     noteOutside: "{n} flights have a time outside this day and were skipped.",
@@ -520,12 +524,16 @@ function localParts(ts) {
 }
 const inWindow = (h) => state.from <= state.to ? h >= state.from && h <= state.to : h >= state.from || h <= state.to;
 
-// Wspólna, BEZWZGLĘDNA skala dla heatmapy i plakietek: liczba lotów -> t (0..1) w skali logarytmicznej,
-// 250+ lotów = 1. Dzięki temu 20 lotów ma zawsze ten sam kolor, niezależnie od wybranych godzin
-// (wcześniej heatmapa normalizowała do bieżącego maksimum i 20 lotów w nocy świeciło na czerwono).
-const SCALE_MAX = 250;
+// Wspólna, BEZWZGLĘDNA skala dla heatmapy i plakietek: loty na godzinę -> t (0..1) w skali
+// logarytmicznej, 45+ lotów/h = 1. Ten sam ruch ma zawsze ten sam kolor, niezależnie od tego,
+// ile godzin jest zaznaczonych (wcześniej heatmapa normalizowała do bieżącego maksimum, a potem
+// liczyła sumę lotów, więc cały dzień zawsze świecił na czerwono).
+const SCALE_MAX = SEQ[SEQ.length - 1].min;
 const tOf = (n) => (n <= 0 ? 0 : Math.min(1, Math.log1p(n) / Math.log1p(SCALE_MAX)));
-const STOP_POS = SEQ.map((s) => tOf(s.min)); // pozycje kolorów na skali: 1, 10, 25, 50, 100, 250
+const STOP_POS = SEQ.map((s) => tOf(s.min)); // pozycje kolorów na skali: 1, 4, 8, 15, 30, 45
+// Liczba zaznaczonych godzin (zakres może przechodzić przez północ, np. 22–5).
+const hoursSelected = () => (state.from <= state.to ? state.to - state.from + 1 : 24 - state.from + state.to + 1);
+const perHour = (total) => total / hoursSelected();
 
 function heatGradient() {
   return Object.fromEntries(STOP_POS.map((p, i) => [p.toFixed(3), BADGE_STOPS[i]]));
@@ -546,7 +554,7 @@ function colorAt(t) {
 }
 
 function seqColor(total) {
-  return total ? colorAt(tOf(total)) : css("--zero");
+  return total ? colorAt(tOf(perHour(total))) : css("--zero");
 }
 
 function airportLabel(icao, short = false) {
@@ -699,7 +707,7 @@ function renderMap(list, counts) {
   if (map.getSize().x > 0) {
     heatLayer.setOptions({ max: 1, gradient: heatGradient() });
     heatLayer.setLatLngs(Object.entries(counts).filter(([, c]) => c.total > 0)
-      .map(([icao, c]) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon, tOf(c.total)]));
+      .map(([icao, c]) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon, tOf(perHour(c.total))]));
   }
 
   renderRoutes(list, dark); // trasy przed lotniskami, żeby kółka były na wierzchu
@@ -953,7 +961,7 @@ async function init() {
     // Jedna skala dla heatmapy i plakietek: kolor = natężenie ruchu.
     div.innerHTML = `<h4>${t("legendTitle")}</h4>
       <div class="heatbar" style="background:linear-gradient(90deg,${BADGE_STOPS.map((c, i) => `${c} ${(STOP_POS[i] * 100).toFixed(1)}%`).join(",")})"></div>
-      <div class="ticks abs">${SEQ.filter((s) => [1, 10, 50, 250].includes(s.min)).map((s) => `<span style="left:${(tOf(s.min) * 100).toFixed(1)}%">${s.label}</span>`).join("")}</div>
+      <div class="ticks abs">${SEQ.filter((s) => [1, 4, 15, 45].includes(s.min)).map((s) => `<span style="left:${(tOf(s.min) * 100).toFixed(1)}%">${s.label}</span>`).join("")}</div>
       <div class="ring-legend"><span class="ring-demo"></span>${t("ring")}: <i class="dot dep"></i>${t("departures")} <i class="dot arr"></i>${t("arrivals")}</div>`;
     return div;
   };
