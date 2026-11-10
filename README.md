@@ -78,6 +78,7 @@ Workflow [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.y
 | `tools/build_airports.mjs` | generuje `data/airports_coords.json` z OurAirports |
 | `data/` | zapisane dni i współrzędne lotnisk |
 | `start.bat` | uruchomienie jednym kliknięciem (Windows) |
+| `docs/plan-swiat.md` | plan rozbudowy mapy na wszystkie kraje i cały świat |
 
 ## Dane i licencje
 

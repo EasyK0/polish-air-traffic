@@ -2,6 +2,10 @@
 
 All notable changes to Polish Air Traffic Map. Adding a new version at the top publishes a GitHub release for it. Daily data commits (`Dane: YYYY-MM-DD`) are not listed.
 
+## [Unreleased]
+
+- `docs/plan-swiat.md` (Polish) and `docs/plan-world.md` (English): the plan for extending the map to every country and the whole world, linked from both READMEs. The 1.1.0 release notes point to it.
+
 ## [1.1.0] - 2026-11-10
 
 Preparation for the world map (see `docs/plan-swiat.md`): the colour scale no longer depends on Poland's numbers, so when more countries or the whole world are added, the map will not turn red everywhere.

@@ -80,6 +80,7 @@ The [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.yml) w
 | `tools/build_airports.mjs` | builds `data/airports_coords.json` from OurAirports |
 | `data/` | saved days and airport coordinates |
 | `start.bat` | one-click start (Windows) |
+| `docs/plan-world.md` | plan for extending the map to every country and the whole world ([Polish version](docs/plan-swiat.md)) |
 
 ## Data and licences
 
