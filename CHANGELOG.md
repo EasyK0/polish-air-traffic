@@ -4,6 +4,7 @@ All notable changes to Polish Air Traffic Map. Adding a new version at the top p
 
 ## [Unreleased]
 
+- Unit tests (`tests/common.test.mjs`, `node --test`) for `lib/common.mjs`: Warsaw midnight and day bounds including the 23 h and 25 h DST change days, local dates, CSV quoting, `api_key.txt` parsing with environment variables winning, and the HTTP retry logic with a fake fetch (429/5xx and network errors retried, other 4xx not, `emptyStatuses`, giving up after the last try or on a too-long retry hint). New `Tests` workflow runs a syntax check and the tests on Node 20 and 22 for every push (except data-only commits) and pull request.
 - `docs/plan-swiat.md` (Polish) and `docs/plan-world.md` (English): the plan for extending the map to every country and the whole world, linked from both READMEs. The 1.1.0 release notes point to it.
 
 ## [1.1.0] - 2026-11-10
