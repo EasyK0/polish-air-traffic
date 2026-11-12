@@ -2,6 +2,8 @@
 
 🇵🇱 Polski · [🇬🇧 English](README.en.md)
 
+[![Testy](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml/badge.svg)](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml)
+
 Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężenia ruchu, trasy do lotnisk docelowych, rozkład godzinowy i ranking lotnisk. Dane pochodzą z [OpenSky Network](https://opensky-network.org) i są pobierane skryptem Node.js.
 
 > 🎓 Projekt powstał na zaliczenie przedmiotu **Wizualizacja informacji** na studiach, a potem został rozbudowany.
@@ -75,6 +77,7 @@ Workflow [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.y
 | `export.mjs` | eksport lotów do CSV |
 | `sources/` | źródła danych: OpenSky, AeroDataBox |
 | `lib/common.mjs` | daty w strefie czasowej, HTTP z ponawianiem, CSV |
+| `tests/` | testy jednostkowe (`node --test tests/*.test.mjs`), uruchamiane też w GitHub Actions |
 | `tools/build_airports.mjs` | generuje `data/airports_coords.json` z OurAirports |
 | `data/` | zapisane dni i współrzędne lotnisk |
 | `start.bat` | uruchomienie jednym kliknięciem (Windows) |

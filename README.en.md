@@ -2,6 +2,8 @@
 
 🇬🇧 English · [🇵🇱 Polski](README.md)
 
+[![Tests](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml/badge.svg)](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml)
+
 An interactive map of air traffic at 15 Polish airports: traffic heatmap, routes to destination airports, hourly breakdown and airport ranking. Flight data comes from the [OpenSky Network](https://opensky-network.org) and is collected by a Node.js exporter that runs daily on GitHub Actions.
 
 > 🎓 Originally built as a university project for the **Information Visualization** course, then extended.
@@ -77,6 +79,7 @@ The [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.yml) w
 | `export.mjs` | flight export to CSV |
 | `sources/` | data sources: OpenSky, AeroDataBox |
 | `lib/common.mjs` | time-zone dates, HTTP with retries, CSV |
+| `tests/` | unit tests (`node --test tests/*.test.mjs`), also run by GitHub Actions |
 | `tools/build_airports.mjs` | builds `data/airports_coords.json` from OurAirports |
 | `data/` | saved days and airport coordinates |
 | `start.bat` | one-click start (Windows) |
