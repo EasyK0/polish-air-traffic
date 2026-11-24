@@ -1,6 +1,13 @@
 {
-  "generated": "2026-11-23T18:00:35.356Z",
+  "generated": "2026-11-24T17:39:03.159Z",
   "days": [
+    {
+      "date": "2026-11-23",
+      "file": "flights_2026-11-23.csv",
+      "rows": 1219,
+      "source": "opensky",
+      "missing": []
+    },
     {
       "date": "2026-11-22",
       "file": "flights_2026-11-22.csv",
