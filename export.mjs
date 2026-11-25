@@ -1,4 +1,5 @@
-// Eksport lotów z polskich lotnisk za jeden dzień do data/flights_YYYY-MM-DD.csv
+// Eksport lotów z lotnisk Polski i krajów z nią graniczących (lista: data/airports_tracked.json)
+// za jeden dzień do data/flights_YYYY-MM-DD.csv
 // i odświeżenie data/index.json (lista dni dla mapy).
 //
 // Użycie:
@@ -14,13 +15,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, yesterday, sleep, toCsv } from "./lib/common.mjs";
+import { trackedList, countriesOf } from "./lib/airports.mjs";
 import { createOpenSky } from "./sources/opensky.mjs";
 import { createAeroDataBox } from "./sources/aerodatabox.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(ROOT, "data");
 const TZ = "Europe/Warsaw";
-const DEFAULT_AIRPORTS = ["EPWA", "EPMO", "EPKK", "EPGD", "EPWR", "EPKT", "EPPO", "EPSC", "EPRZ", "EPLB", "EPBY", "EPZG", "EPSY", "EPLL", "EPRA"];
+// Dzień liczymy w czasie polskim dla wszystkich krajów, żeby godziny na mapie były wspólne.
+const POLAND = ["EPWA", "EPMO", "EPKK", "EPGD", "EPWR", "EPKT", "EPPO", "EPSC", "EPRZ", "EPLB", "EPBY", "EPZG", "EPSY", "EPLL", "EPRA"];
+
+// Lotniska śledzone wg krajów (buduje je tools/build_airports.mjs). Bez pliku: sama Polska.
+function loadTracked() {
+  const file = path.join(DATA, "airports_tracked.json");
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : { PL: POLAND };
+}
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const m = /^--([^=]+)(?:=(.*))?$/.exec(a);
@@ -37,7 +46,7 @@ function buildIndex() {
     let meta = {};
     const metaFile = path.join(DATA, `flights_${m[1]}.meta.json`);
     if (fs.existsSync(metaFile)) meta = JSON.parse(fs.readFileSync(metaFile, "utf8"));
-    days.push({ date: m[1], file: f, rows, source: meta.source ?? "?", missing: meta.missing ?? [], note: meta.note });
+    days.push({ date: m[1], file: f, rows, source: meta.source ?? "?", missing: meta.missing ?? [], countries: meta.countries, note: meta.note });
   }
   days.sort((a, b) => b.date.localeCompare(a.date));
   // --keep=N: zostaw tylko N najnowszych dni (żeby repo i demo nie rosły bez końca).
@@ -65,13 +74,14 @@ async function main() {
 
   const cfg = loadConfig(path.join(ROOT, "api_key.txt"));
   const source = pickSource(cfg);
+  const tracked = loadTracked();
   const date = typeof args.date === "string" ? args.date : yesterday(TZ);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`Zła data: ${date}`);
-  const airports = typeof args.airports === "string" ? args.airports.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean) : DEFAULT_AIRPORTS;
+  const airports = typeof args.airports === "string" ? args.airports.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean) : trackedList(tracked);
   const pause = Number(args.sleep ?? 500);
 
   console.log(`Eksport ${date} (${TZ}), źródło: ${source.name}`);
-  console.log(`Lotniska: ${airports.join(", ")}\n`);
+  console.log(`Lotniska (${airports.length}): ${airports.join(", ")}\n`);
 
   fs.mkdirSync(DATA, { recursive: true });
   const partial = path.join(DATA, `flights_${date}.partial.csv`);
@@ -116,10 +126,12 @@ async function main() {
   fs.writeFileSync(out, toCsv(rows));
   fs.rmSync(partial, { force: true });
   const missing = failed.map((j) => j.label);
-  fs.writeFileSync(path.join(DATA, `flights_${date}.meta.json`), JSON.stringify({ date, source: source.name, exported: new Date().toISOString(), missing }, null, 2));
+  fs.writeFileSync(path.join(DATA, `flights_${date}.meta.json`), JSON.stringify({ date, source: source.name, exported: new Date().toISOString(), countries: countriesOf(airports, tracked), missing }, null, 2));
 
   console.log(`\nZapisano ${path.relative(ROOT, out)} (${rows.length} lotów)`);
   if (missing.length) console.warn(`UWAGA, brakuje danych: ${missing.join("; ")}`);
+  const quota = source.quota?.();
+  if (quota) console.log(quota);
   buildIndex();
   if (missing.length) process.exitCode = 2;
 }
