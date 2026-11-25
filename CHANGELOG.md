@@ -4,6 +4,10 @@ All notable changes to Polish Air Traffic Map. Adding a new version at the top p
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-26
+
+The first step beyond Poland (see `docs/plan-swiat.md`): the map now also covers the countries bordering Poland, 52 airports in total, with a country picker. Neighbour data starts with the first daily export after this release; earlier days show Poland only.
+
 - Airport data for Poland and the countries bordering it: `tools/build_airports.mjs` now also writes `data/airports_tracked.json`, the airports the map covers, by country (Poland 15, Germany 22, Czechia 6, Slovakia 3, Lithuania 3, Belarus 2, Kaliningrad Oblast 1; Ukraine is listed with none, its airspace is closed to civilian flights). Poland keeps every large and medium airport with scheduled flights; the neighbours get the large ones plus Brno, Košice and Poprad, to stay inside the daily OpenSky credits. `data/airports_coords.json` gains the airport's country as a sixth field and is rebuilt from the current OurAirports file. The country list and the rules live in the new `lib/airports.mjs`.
 - Unit tests for `lib/airports.mjs` (`tests/airports.test.mjs`): OurAirports CSV parsing, duplicate ICAO codes, the coordinates entry, which airports are tracked per country (Kaliningrad only for Russia, none for Ukraine), and checks of the committed `data/airports_tracked.json` (the 15 Polish airports, coordinates and country for each one, the export staying under 3,600 OpenSky credits a day).
 - `export.mjs` fetches every airport from `data/airports_tracked.json` (52 instead of the 15 Polish ones; Poland goes first) and saves the covered countries in the day's `meta.json` and in `data/index.json` (`countries`). The day is still the Warsaw day for every country, so hours are comparable. Without the tracked file the export falls back to the 15 Polish airports.
