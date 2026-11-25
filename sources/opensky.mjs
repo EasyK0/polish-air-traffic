@@ -24,13 +24,22 @@ export function createOpenSky(cfg, { tz }) {
     return token;
   }
 
+  // Ile kredytów zostało na dziś (nagłówek X-Rate-Limit-Remaining). Każde zapytanie o dzień
+  // lotniska kosztuje kredyty, a darmowe konto ma ich ok. 4000 na dobę.
+  let remaining = null, requests = 0;
+  const onResponse = (res) => {
+    requests++;
+    const left = Number(res.headers.get("x-rate-limit-remaining"));
+    if (res.headers.get("x-rate-limit-remaining") !== null && Number.isFinite(left)) remaining = left;
+  };
+
   async function get(path, params) {
     const url = `${API}${path}?${new URLSearchParams(params)}`;
     for (let i = 0; i < 2; i++) {
       try {
         const t = await getToken(i > 0);
         // OpenSky zwraca 404, gdy w przedziale nie ma lotów.
-        return (await fetchJson(url, { headers: { Authorization: `Bearer ${t}` } }, { emptyStatuses: [404] })) ?? [];
+        return (await fetchJson(url, { headers: { Authorization: `Bearer ${t}` } }, { emptyStatuses: [404], onResponse })) ?? [];
       } catch (e) {
         if (e instanceof HttpError && e.status === 401 && i === 0) continue; // token wygasł
         throw e;
@@ -42,6 +51,7 @@ export function createOpenSky(cfg, { tz }) {
 
   return {
     name: "opensky",
+    quota: () => `OpenSky: ${requests} zapytań` + (remaining === null ? "" : `, zostało ${remaining} kredytów na dziś`),
     jobs(ap, date) {
       const { begin, end } = dayBoundsUnix(date, tz);
       const params = { airport: ap, begin: String(begin), end: String(end) };

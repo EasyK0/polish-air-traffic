@@ -147,6 +147,13 @@ describe("fetchJson", () => {
     assert.equal(await fetchJson("https://x", {}, { ...fast, emptyStatuses: [404] }), null);
   });
 
+  test("onResponse sees every response, also the retried ones", async () => {
+    fakeFetch({ status: 429 }, { body: "[1]", headers: { "x-rate-limit-remaining": "3970" } });
+    const seen = [];
+    await fetchJson("https://x", {}, { ...fast, onResponse: (res) => seen.push([res.status, res.headers.get("x-rate-limit-remaining")]) });
+    assert.deepEqual(seen, [[429, null], [200, "3970"]]);
+  });
+
   test("gives up after the last retry with the last error", async () => {
     fakeFetch({ status: 500, body: "boom" });
     await assert.rejects(fetchJson("https://x", {}, { ...fast, retries: 3 }), (e) => e instanceof HttpError && e.status === 500);
