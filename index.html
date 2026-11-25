@@ -723,7 +723,9 @@ function renderMap(list, counts) {
   // Heatmapa: waga punktu = pozycja na wspólnej skali, więc środek plamy ma kolor plakietki.
   const max = Math.max(1, ...Object.values(counts).map((c) => c.total));
   if (map.getSize().x > 0) {
-    heatLayer.setOptions({ max: 1, gradient: heatGradient() });
+    // Przy oddaleniu mniejsze plamy, żeby sąsiednie lotniska (np. w Zagłębiu Ruhry) nie zlewały się w jedną.
+    const z = map.getZoom(), radius = z >= 6 ? 55 : z >= 5 ? 38 : 26;
+    heatLayer.setOptions({ max: 1, gradient: heatGradient(), radius, blur: Math.round(radius * 0.7) });
     heatLayer.setLatLngs(Object.entries(counts).filter(([, c]) => c.total > 0)
       .map(([icao, c]) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon, tOf(perHour(c.total))]));
   }
@@ -739,7 +741,7 @@ function renderMap(list, counts) {
     const c = counts[icao];
     const sel = icao === state.selected;
     let size = c.total ? 30 + Math.sqrt(c.total) * 2.1 : 24;
-    if (far) size = Math.max(18, size * 0.6);
+    if (far) size = c.total ? Math.max(18, size * 0.6) : 12;
     const depPct = c.total ? (c.departure / c.total) * 100 : 0;
     const fill = seqColor(c.total);
     const ink = c.total ? inkFor(fill) : css("--text-2");
@@ -766,13 +768,16 @@ function renderMap(list, counts) {
 }
 
 // Trasy (obie strony razem dla pary lotnisk).
+const MAX_ROUTES = 400;
 function renderRoutes(list, dark) {
   routeLayer.clearLayers();
   const pairs = new Map();
   for (const f of list) if (f.other) { const k = `${f.ap}|${f.other}`; pairs.set(k, (pairs.get(k) || 0) + 1); }
   const color = state.dir === "arrival" ? css("--arr") : state.dir === "departure" ? css("--dep") : (dark ? "#9085e9" : "#6250d6");
   let routes = 0;
-  const sorted = [...pairs].sort((a, b) => a[1] - b[1]); // grube na wierzchu
+  let sorted = [...pairs].sort((a, b) => a[1] - b[1]); // grube na wierzchu
+  // Bez wybranego lotniska rysujemy tylko najczęstsze trasy (tysiąc łuków spowalnia mapę i nic nie widać).
+  if (!state.selected && sorted.length > MAX_ROUTES) sorted = sorted.slice(-MAX_ROUTES);
   for (const [k, n] of sorted) {
     const [ap, other] = k.split("|");
     const to = AIRPORTS[other] ? [AIRPORTS[other].lat, AIRPORTS[other].lon] : state.coords[other]?.slice(0, 2);
@@ -998,8 +1003,10 @@ async function init() {
     if ($("layerRoutes").checked && map.getZoom() > 4.5) map.flyTo([50, 14], 4, { duration: 0.8 });
   });
   $("dClose").addEventListener("click", clearSelection);
+  // Rozmiar plakietek i plam heatmapy zależy od przybliżenia (progi 5, 5.5 i 6).
   let lastZoomBand = null;
-  map.on("zoomend", () => { const b = map.getZoom() < 5.5; if (b !== lastZoomBand) { lastZoomBand = b; render(); } });
+  const zoomBand = () => { const z = map.getZoom(); return z < 5 ? 0 : z < 5.5 ? 1 : z < 6 ? 2 : 3; };
+  map.on("zoomend", () => { const b = zoomBand(); if (b !== lastZoomBand) { lastZoomBand = b; render(); } });
   $("themeBtn").addEventListener("click", () => setTheme(isDark() ? "light" : "dark"));
   $("langBtn").addEventListener("click", () => setLang(LANG === "pl" ? "en" : "pl"));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.selected) clearSelection(); });
