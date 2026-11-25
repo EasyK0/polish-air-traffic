@@ -4,7 +4,7 @@
 
 [![Tests](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml/badge.svg)](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml)
 
-An interactive map of air traffic at 15 Polish airports: traffic heatmap, routes to destination airports, hourly breakdown and airport ranking. Flight data comes from the [OpenSky Network](https://opensky-network.org) and is collected by a Node.js exporter that runs daily on GitHub Actions.
+An interactive map of air traffic at airports in Poland and the countries bordering it (Germany, Czechia, Slovakia, Lithuania, Belarus, Kaliningrad Oblast; 52 airports, 15 of them Polish): traffic heatmap, routes to destination airports, hourly breakdown and airport ranking. Flight data comes from the [OpenSky Network](https://opensky-network.org) and is collected by a Node.js exporter that runs daily on GitHub Actions.
 
 > 🎓 Originally built as a university project for the **Information Visualization** course, then extended.
 
@@ -19,7 +19,8 @@ An interactive map of air traffic at 15 Polish airports: traffic heatmap, routes
 - **Hour selection:** drag across the hourly chart, pick a time of day (morning, afternoon, evening, night) or animate the whole day.
 - **Direction filter:** all flights, departures only or arrivals only.
 - **Airport details:** click an airport to see its hourly chart and top destinations.
-- **Day picker** across saved exports, local time (Europe/Warsaw).
+- **Country picker:** Poland and its neighbours together or a single country (address `?country=DE`). Ukraine is listed without airports, because its airspace is closed to civilian flights. Days saved before version 1.2.0 have data for Poland only.
+- **Day picker** across saved exports, one shared time for every country (Europe/Warsaw).
 - **Polish / English** interface, **light and dark theme**, mobile layout, keyboard support.
 
 <details>
@@ -36,7 +37,7 @@ OpenSky REST API (OAuth2)  ─┐
 AeroDataBox (optional)     ─┘                    data/index.json (list of days)
 ```
 
-- `export.mjs` fetches the day's departures and arrivals for every airport, removes duplicates, retries failed requests and writes a CSV plus `data/index.json`.
+- `export.mjs` fetches the day's departures and arrivals for every airport listed in `data/airports_tracked.json` (2 requests per airport, about 3,100 of the 4,000 daily credits of a free OpenSky account), removes duplicates, retries failed requests and writes a CSV plus `data/index.json`.
 - `sources/opensky.mjs`: OAuth2 client-credentials login with automatic token refresh and rate-limit handling (HTTP 429).
 - `sources/aerodatabox.mjs`: alternative source via API.Market (requires a subscription).
 - `index.html`: a static page (Leaflet, Leaflet.heat, no framework, no build step) that reads the CSV files from `data/`.
@@ -79,8 +80,9 @@ The [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.yml) w
 | `export.mjs` | flight export to CSV |
 | `sources/` | data sources: OpenSky, AeroDataBox |
 | `lib/common.mjs` | time-zone dates, HTTP with retries, CSV |
+| `lib/airports.mjs` | country list and the rules for picking airports from OurAirports |
 | `tests/` | unit tests (`node --test tests/*.test.mjs`), also run by GitHub Actions |
-| `tools/build_airports.mjs` | builds `data/airports_coords.json` from OurAirports |
+| `tools/build_airports.mjs` | builds `data/airports_coords.json` (coordinates, country) and `data/airports_tracked.json` (airports the export asks about) from OurAirports |
 | `data/` | saved days and airport coordinates |
 | `start.bat` | one-click start (Windows) |
 | `docs/plan-world.md` | plan for extending the map to every country and the whole world ([Polish version](docs/plan-swiat.md)) |

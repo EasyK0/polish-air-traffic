@@ -3,6 +3,8 @@
 [🇬🇧 English](plan-world.md) · 🇵🇱 Polski
 
 > **Stan (2026-11-10):** skala kolorów jest już na to gotowa (wersja 1.1.0): kolor zależy od lotów na godzinę, a górna granica skali jest liczona z danych dnia, więc po dodaniu kolejnych krajów mapa nie zrobi się cała czerwona. Reszta planu jest jeszcze do zrobienia.
+>
+> **Stan (2026-11-15):** pierwszy krok poza Polskę (wersja 1.2.0): mapa obejmuje też kraje graniczące z Polską (Niemcy, Czechy, Słowacja, Litwa, Białoruś, obwód kaliningradzki; Ukraina bez lotnisk, bo jej przestrzeń jest zamknięta), razem 52 lotniska. Jest wybór kraju (`?country=DE`), lista lotnisk nie jest już wpisana w stronę (`data/airports_tracked.json`), a `airports_coords.json` ma kraj lotniska. Eksport dalej pyta o każde lotnisko osobno (ok. 3100 z 4000 kredytów dziennie), więc kolejne kraje wymagają już `/flights/all` z punktu 1. Godziny są wspólne dla wszystkich krajów (czas polski), strefy czasowe lotnisk zostają na później.
 
 ## Cel
 Ta sama mapa co dla Polski (heatmapa, plakietki, trasy, wykres godzinowy, ranking, szczegóły lotniska), ale z wyborem dowolnego kraju i widokiem całego świata. Dane nadal z OpenSky, aktualizowane codziennie przez GitHub Actions, demo na GitHub Pages.

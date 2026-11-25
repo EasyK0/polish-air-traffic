@@ -4,7 +4,7 @@
 
 [![Testy](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml/badge.svg)](https://github.com/EasyK0/polish-air-traffic/actions/workflows/tests.yml)
 
-Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężenia ruchu, trasy do lotnisk docelowych, rozkład godzinowy i ranking lotnisk. Dane pochodzą z [OpenSky Network](https://opensky-network.org) i są pobierane skryptem Node.js.
+Interaktywna mapa ruchu lotniczego na lotniskach Polski i krajów z nią graniczących (Niemcy, Czechy, Słowacja, Litwa, Białoruś, obwód kaliningradzki; 52 lotniska, w tym 15 polskich): heatmapa natężenia ruchu, trasy do lotnisk docelowych, rozkład godzinowy i ranking lotnisk. Dane pochodzą z [OpenSky Network](https://opensky-network.org) i są pobierane skryptem Node.js.
 
 > 🎓 Projekt powstał na zaliczenie przedmiotu **Wizualizacja informacji** na studiach, a potem został rozbudowany.
 
@@ -19,7 +19,8 @@ Interaktywna mapa ruchu lotniczego na 15 polskich lotniskach: heatmapa natężen
 - **Wybór godzin:** przeciągnięcie po wykresie godzinowym, gotowe pory dnia (rano, popołudnie, wieczór, noc) albo animacja całej doby.
 - **Filtr kierunku:** wszystkie loty, same odloty albo same przyloty.
 - **Szczegóły lotniska:** po kliknięciu wykres godzinowy tego lotniska i najczęstsze kierunki.
-- **Wybór dnia** spośród zapisanych eksportów, czas lokalny (Europe/Warsaw).
+- **Wybór kraju:** Polska i sąsiedzi razem albo jeden kraj (adres `?country=DE`). Ukraina jest na liście bez lotnisk, bo jej przestrzeń jest zamknięta dla lotów cywilnych. Dni zapisane przed wersją 1.2.0 mają dane tylko dla Polski.
+- **Wybór dnia** spośród zapisanych eksportów, jeden wspólny czas dla wszystkich krajów (Europe/Warsaw).
 - **Interfejs po polsku i angielsku**, **jasny i ciemny motyw**, układ dopasowany do telefonu, obsługa klawiaturą.
 
 <details>
@@ -36,7 +37,7 @@ OpenSky REST API (OAuth2)  ─┐
 AeroDataBox (opcjonalnie)  ─┘                    data/index.json (lista dni)
 ```
 
-- `export.mjs` pobiera odloty i przyloty z wybranego dnia dla każdego lotniska, usuwa duplikaty, ponawia nieudane zapytania i zapisuje CSV oraz `data/index.json`.
+- `export.mjs` pobiera odloty i przyloty z wybranego dnia dla każdego lotniska z listy `data/airports_tracked.json` (2 zapytania na lotnisko, razem ok. 3100 z 4000 dziennych kredytów darmowego konta OpenSky), usuwa duplikaty, ponawia nieudane zapytania i zapisuje CSV oraz `data/index.json`.
 - `sources/opensky.mjs`: logowanie OAuth2 (client credentials) z automatycznym odświeżaniem tokenu i obsługą limitów (HTTP 429).
 - `sources/aerodatabox.mjs`: alternatywne źródło przez API.Market (wymaga subskrypcji).
 - `index.html`: statyczna strona (Leaflet, Leaflet.heat, bez frameworka i bez kroku budowania), czyta CSV z folderu `data/`.
@@ -77,8 +78,9 @@ Workflow [`.github/workflows/daily-export.yml`](.github/workflows/daily-export.y
 | `export.mjs` | eksport lotów do CSV |
 | `sources/` | źródła danych: OpenSky, AeroDataBox |
 | `lib/common.mjs` | daty w strefie czasowej, HTTP z ponawianiem, CSV |
+| `lib/airports.mjs` | lista krajów i reguły wyboru lotnisk z bazy OurAirports |
 | `tests/` | testy jednostkowe (`node --test tests/*.test.mjs`), uruchamiane też w GitHub Actions |
-| `tools/build_airports.mjs` | generuje `data/airports_coords.json` z OurAirports |
+| `tools/build_airports.mjs` | generuje `data/airports_coords.json` (współrzędne, kraj) i `data/airports_tracked.json` (lotniska pobierane przez eksport) z OurAirports |
 | `data/` | zapisane dni i współrzędne lotnisk |
 | `start.bat` | uruchomienie jednym kliknięciem (Windows) |
 | `docs/plan-swiat.md` | plan rozbudowy mapy na wszystkie kraje i cały świat |

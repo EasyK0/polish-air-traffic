@@ -3,6 +3,8 @@
 🇬🇧 English · [🇵🇱 Polski](plan-swiat.md)
 
 > **Status (2026-11-10):** the colour scale is ready for it (release 1.1.0): colours follow flights per hour and the top of the scale is computed from the day's data, so the map will not turn red everywhere when more countries are added. Everything else below is still to do.
+>
+> **Status (2026-11-15):** the first step beyond Poland (release 1.2.0): the map also covers the countries bordering Poland (Germany, Czechia, Slovakia, Lithuania, Belarus, Kaliningrad Oblast; Ukraine without airports, because its airspace is closed), 52 airports in total. There is a country picker (`?country=DE`), the airport list is no longer hard-coded in the page (`data/airports_tracked.json`), and `airports_coords.json` carries the airport's country. The export still asks about each airport separately (about 3,100 of the 4,000 daily credits), so more countries need `/flights/all` from point 1. Hours are shared by every country (Polish time); per-airport time zones come later.
 
 ## Goal
 The same map as for Poland (heatmap, badges, routes, hourly chart, ranking, airport details), but with any country to choose from and a view of the whole world. Data still from OpenSky, updated daily by GitHub Actions, demo on GitHub Pages.
