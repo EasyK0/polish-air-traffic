@@ -2,13 +2,13 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8" />
-<title>Mapa lotów w Polsce · Polish Air Traffic</title>
+<title>Mapa lotów: Polska i sąsiedzi · Polish Air Traffic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <!-- Polityka bezpieczeństwa: skrypty i style tylko z tej strony i cdnjs, dane tylko z tej strony,
      kafelki mapy tylko z Esri. Blokuje wysyłanie czegokolwiek na inne serwery. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://server.arcgisonline.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
-<meta name="description" content="Interaktywna mapa ruchu lotniczego na polskich lotniskach: heatmapa, trasy i rozkład godzinowy." />
+<meta name="description" content="Interaktywna mapa ruchu lotniczego na lotniskach Polski i krajów sąsiednich: heatmapa, trasy i rozkład godzinowy." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -101,6 +101,7 @@ select {
   width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--surface); color: var(--text);
 }
+.pickers { display: flex; flex-direction: column; gap: 12px; }
 button { font: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -167,6 +168,9 @@ button { font: inherit; }
 .rank .track { display: flex; gap: 2px; height: 6px; margin-top: 4px; }
 .rank .track i { display: block; height: 100%; border-radius: 3px; min-width: 0; }
 .rank .track i.dep { background: var(--dep); } .rank .track i.arr { background: var(--arr); }
+.rank .cc { color: var(--text-3); font-size: 11px; }
+.rank-more { margin-top: 6px; width: 100%; }
+.rank-more[hidden] { display: none; }
 
 /* ---------- karta lotniska ---------- */
 #detail { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: none; }
@@ -251,8 +255,8 @@ button { font: inherit; }
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
     </div>
     <div>
-      <h1 data-i18n="title">Mapa lotów w Polsce</h1>
-      <p data-i18n="subtitle">15 lotnisk · czas polski</p>
+      <h1 data-i18n="title">Mapa lotów</h1>
+      <p id="subtitle">Polska i sąsiedzi · czas polski</p>
     </div>
     <div class="spacer"></div>
     <button class="icon-btn lang-btn" id="langBtn" data-i18n-aria="langAria" data-i18n-title="langAria" aria-label="Switch to English" title="Switch to English">EN</button>
@@ -261,9 +265,15 @@ button { font: inherit; }
     </button>
   </div>
 
-  <div>
-    <div class="section-title"><label for="daySelect" data-i18n="day">Dzień</label></div>
-    <select id="daySelect" disabled><option data-i18n="loading">ładowanie…</option></select>
+  <div class="pickers">
+    <div>
+      <div class="section-title"><label for="countrySelect" data-i18n="country">Kraj</label></div>
+      <select id="countrySelect" disabled><option data-i18n="loading">ładowanie…</option></select>
+    </div>
+    <div>
+      <div class="section-title"><label for="daySelect" data-i18n="day">Dzień</label></div>
+      <select id="daySelect" disabled><option data-i18n="loading">ładowanie…</option></select>
+    </div>
   </div>
 
   <div class="kpis" aria-live="polite">
@@ -332,6 +342,7 @@ button { font: inherit; }
   <div>
     <div class="section-title"><span data-i18n="airports">Lotniska</span><span class="grow"></span><span style="text-transform:none;letter-spacing:0" data-i18n="inSelectedHours">w wybranych godzinach</span></div>
     <ul class="rank" id="rank"></ul>
+    <button class="btn rank-more" id="rankMore" hidden></button>
   </div>
 
   <div class="note" id="note"></div>
@@ -349,24 +360,45 @@ button { font: inherit; }
 const TZ = "Europe/Warsaw";
 const DATA_DIR = "data/";
 
-// 15 polskich lotnisk z eksportu (ICAO). Współrzędne lotnisk zagranicznych: data/airports_coords.json.
-const AIRPORTS = {
-  EPWA: { iata: "WAW", name: "Warszawa Chopin",     lat: 52.1657, lon: 20.9679 },
-  EPMO: { iata: "WMI", name: "Warszawa Modlin",     lat: 52.4511, lon: 20.6518 },
-  EPKK: { iata: "KRK", name: "Kraków Balice",       lat: 50.0777, lon: 19.7848 },
-  EPGD: { iata: "GDN", name: "Gdańsk Lech Wałęsa",  lat: 54.3775, lon: 18.4663 },
-  EPWR: { iata: "WRO", name: "Wrocław Copernicus",  lat: 51.1027, lon: 16.8858 },
-  EPKT: { iata: "KTW", name: "Katowice Pyrzowice",  lat: 50.4743, lon: 19.0800 },
-  EPPO: { iata: "POZ", name: "Poznań Ławica",       lat: 52.4210, lon: 16.8263 },
-  EPSC: { iata: "SZZ", name: "Szczecin Goleniów",   lat: 53.5847, lon: 14.9022 },
-  EPRZ: { iata: "RZE", name: "Rzeszów Jasionka",    lat: 50.1092, lon: 22.0193 },
-  EPLL: { iata: "LCJ", name: "Łódź Lublinek",       lat: 51.7219, lon: 19.3981 },
-  EPLB: { iata: "LUZ", name: "Lublin",              lat: 51.2391, lon: 22.7145 },
-  EPBY: { iata: "BZG", name: "Bydgoszcz",           lat: 53.0967, lon: 17.9773 },
-  EPSY: { iata: "SZY", name: "Olsztyn-Mazury",      lat: 53.4819, lon: 20.9375 },
-  EPZG: { iata: "IEG", name: "Zielona Góra",        lat: 52.1385, lon: 15.7986 },
-  EPRA: { iata: "RDO", name: "Radom",               lat: 51.3890, lon: 21.2133 },
+// Lotniska na mapie: Polska i kraje z nią graniczące. Listę krajów i lotnisk podaje
+// data/airports_tracked.json (te same lotniska pobiera eksport), a współrzędne i nazwy
+// data/airports_coords.json. AIRPORTS wypełnia buildAirports() po wczytaniu obu plików.
+let AIRPORTS = {};
+let COUNTRY_CODES = ["PL"];
+// Krótkie nazwy zamiast pełnych z bazy OurAirports (tam np. "Leoš Janáček Airport Ostrava").
+// Lotniska spoza tej listy dostają nazwę miasta.
+const NAMES = {
+  EPWA: "Warszawa Chopin", EPMO: "Warszawa Modlin", EPKK: "Kraków Balice", EPGD: "Gdańsk Lech Wałęsa",
+  EPWR: "Wrocław Copernicus", EPKT: "Katowice Pyrzowice", EPPO: "Poznań Ławica", EPSC: "Szczecin Goleniów",
+  EPRZ: "Rzeszów Jasionka", EPLL: "Łódź Lublinek", EPLB: "Lublin", EPBY: "Bydgoszcz",
+  EPSY: "Olsztyn-Mazury", EPZG: "Zielona Góra", EPRA: "Radom",
+  EDDB: "Berlin Brandenburg", EDDF: "Frankfurt", EDDG: "Münster/Osnabrück", EDDK: "Köln/Bonn",
+  EDDM: "München", EDDN: "Nürnberg", EDDP: "Leipzig/Halle", EDFH: "Frankfurt-Hahn", EDLP: "Paderborn/Lippstadt",
+  EDSB: "Karlsruhe/Baden-Baden", EDVK: "Kassel", LKMT: "Ostrava", LKPR: "Praha", UMMS: "Minsk", UMKK: "Kaliningrad",
 };
+// Lotniska Polski, gdyby nie udało się wczytać plików z listą i współrzędnymi.
+const FALLBACK = {
+  EPWA: ["WAW", 52.1657, 20.9679], EPMO: ["WMI", 52.4511, 20.6518], EPKK: ["KRK", 50.0777, 19.7848],
+  EPGD: ["GDN", 54.3775, 18.4663], EPWR: ["WRO", 51.1027, 16.8858], EPKT: ["KTW", 50.4743, 19.0800],
+  EPPO: ["POZ", 52.4210, 16.8263], EPSC: ["SZZ", 53.5847, 14.9022], EPRZ: ["RZE", 50.1092, 22.0193],
+  EPLL: ["LCJ", 51.7219, 19.3981], EPLB: ["LUZ", 51.2391, 22.7145], EPBY: ["BZG", 53.0967, 17.9773],
+  EPSY: ["SZY", 53.4819, 20.9375], EPZG: ["IEG", 52.1385, 15.7986], EPRA: ["RDO", 51.3890, 21.2133],
+};
+function buildAirports(tracked, coords) {
+  if (!tracked || !Object.keys(tracked).length) tracked = { PL: Object.keys(FALLBACK) };
+  AIRPORTS = {};
+  COUNTRY_CODES = Object.keys(tracked);
+  for (const [country, list] of Object.entries(tracked)) {
+    for (const icao of list) {
+      const c = coords[icao], f = FALLBACK[icao];
+      if (!c && !f) continue;
+      AIRPORTS[icao] = {
+        iata: (c ? c[2] : f[0]) || icao, name: NAMES[icao] || (c && (c[4] || c[3])) || icao,
+        lat: c ? c[0] : f[1], lon: c ? c[1] : f[2], country,
+      };
+    }
+  }
+}
 
 // Progi natężenia ruchu: LOTY NA GODZINĘ (średnio w wybranych godzinach), nie suma lotów.
 // Suma rosła z liczbą zaznaczonych godzin, więc przy całym dniu Warszawa (~450), Kraków (~200)
@@ -394,6 +426,7 @@ function inkFor(hex) {
 const state = {
   days: [], coords: {}, cache: new Map(),
   day: null, flights: [], outside: 0,
+  country: "all", rankAll: false,
   from: 0, to: 23, dir: "all", selected: null, playing: null,
 };
 let map, tiles, heatLayer, circleLayer, routeLayer;
@@ -409,7 +442,12 @@ const isDark = () => css("color-scheme") === "dark";
 // ---------- języki (PL / EN) ----------
 const I18N = {
   pl: {
-    title: "Mapa lotów w Polsce", subtitle: "15 lotnisk · czas polski",
+    title: "Mapa lotów", polishTime: "czas polski", country: "Kraj",
+    allCountries: "Polska i sąsiedzi", kaliningrad: "obwód kaliningradzki",
+    noCivil: "brak lotów cywilnych", noData: "brak danych z tego dnia",
+    airportForms: ["lotnisko", "lotniska", "lotnisk"],
+    showAll: "Pokaż wszystkie ({n})", showTop: "Pokaż tylko największe",
+    noteOnlyCountries: "Z tego dnia są dane tylko dla: {list}.",
     langAria: "Switch to English", theme: "Zmień motyw", themeAria: "Zmień motyw jasny/ciemny",
     day: "Dzień", loading: "ładowanie…", allFlights: "wszystkie loty", destinations: "kierunków",
     departures: "odloty", arrivals: "przyloty", perHour: "Loty na godzinę",
@@ -430,10 +468,15 @@ const I18N = {
     errNoDays: "Brak zapisanych dni w data/index.json. Uruchom eksport: start.bat export",
     errFile: "Otwórz stronę przez serwer (start.bat), a nie bezpośrednio z pliku.",
     errLeaflet: "Nie udało się wczytać biblioteki mapy (Leaflet). Sprawdź internet i odśwież.",
-    metaDesc: "Interaktywna mapa ruchu lotniczego na polskich lotniskach: heatmapa, trasy i rozkład godzinowy.",
+    metaDesc: "Interaktywna mapa ruchu lotniczego na lotniskach Polski i krajów sąsiednich: heatmapa, trasy i rozkład godzinowy.",
   },
   en: {
-    title: "Polish Air Traffic Map", subtitle: "15 airports · Polish time",
+    title: "Air Traffic Map", polishTime: "Polish time", country: "Country",
+    allCountries: "Poland and neighbours", kaliningrad: "Kaliningrad Oblast",
+    noCivil: "no civilian flights", noData: "no data for this day",
+    airportForms: ["airport", "airports", "airports"],
+    showAll: "Show all ({n})", showTop: "Show the busiest only",
+    noteOnlyCountries: "This day has data only for: {list}.",
     langAria: "Przełącz na polski", theme: "Change theme", themeAria: "Toggle light/dark theme",
     day: "Day", loading: "loading…", allFlights: "all flights", destinations: "destinations",
     departures: "departures", arrivals: "arrivals", perHour: "Flights per hour",
@@ -454,7 +497,7 @@ const I18N = {
     errNoDays: "No saved days in data/index.json. Run the export: start.bat export",
     errFile: "Open the page through a server (start.bat), not directly from the file.",
     errLeaflet: "Could not load the map library (Leaflet). Check your connection and reload.",
-    metaDesc: "Interactive map of air traffic at Polish airports: heatmap, routes and hourly breakdown.",
+    metaDesc: "Interactive map of air traffic at airports in Poland and its neighbouring countries: heatmap, routes and hourly breakdown.",
   },
 };
 let LANG = (() => {
@@ -474,7 +517,7 @@ const depArrHtml = (d, a) =>
 // Tłumaczy statyczny HTML oznaczony data-i18n / data-i18n-aria / data-i18n-title.
 function applyStatic() {
   document.documentElement.lang = LANG;
-  document.title = LANG === "pl" ? "Mapa lotów w Polsce" : "Polish Air Traffic Map";
+  document.title = LANG === "pl" ? "Mapa lotów: Polska i sąsiedzi" : "Air Traffic Map: Poland and neighbours";
   document.querySelector('meta[name="description"]').setAttribute("content", t("metaDesc"));
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
@@ -490,12 +533,75 @@ function fillDaySelect() {
   if (cur && state.days.some((d) => d.date === cur)) sel.value = cur;
 }
 
+// ---------- kraje ----------
+// Kraje, dla których wybrany dzień ma dane (dni sprzed rozszerzenia mapy: sama Polska).
+const dayCountries = () => (state.day?.countries?.length ? state.day.countries : ["PL"]).filter((c) => COUNTRY_CODES.includes(c));
+const countryAirports = (code) => Object.keys(AIRPORTS).filter((icao) => AIRPORTS[icao].country === code);
+function countryName(code) {
+  let name = code;
+  try { name = new Intl.DisplayNames([LOCALE()], { type: "region" }).of(code) || code; } catch (e) {}
+  return code === "RU" ? `${name} (${t("kaliningrad")})` : name;
+}
+// Lotniska widoczne teraz na mapie: kraje z danymi z wybranego dnia, zawężone do wybranego kraju.
+function activeAirports() {
+  const ok = new Set(dayCountries());
+  return Object.keys(AIRPORTS).filter((icao) => ok.has(AIRPORTS[icao].country) && (state.country === "all" || AIRPORTS[icao].country === state.country));
+}
+const isActive = (icao) => {
+  const a = AIRPORTS[icao];
+  return !!a && (state.country === "all" || a.country === state.country) && dayCountries().includes(a.country);
+};
+// Polska liczba mnoga: 1 lotnisko, 2-4 lotniska (poza 12-14), reszta lotnisk.
+function plural(n, forms) {
+  if (LANG !== "pl") return n === 1 ? forms[0] : forms[1];
+  if (n === 1) return forms[0];
+  const d = n % 10, h = n % 100;
+  return d >= 2 && d <= 4 && !(h >= 12 && h <= 14) ? forms[1] : forms[2];
+}
+
+function fillCountrySelect() {
+  const sel = $("countrySelect");
+  const have = dayCountries();
+  const opt = (code) => {
+    const n = countryAirports(code).length;
+    const why = !n ? t("noCivil") : !have.includes(code) ? t("noData") : `${n} ${plural(n, I18N[LANG].airportForms)}`;
+    return `<option value="${esc(code)}"${n && have.includes(code) ? "" : " disabled"}>${esc(countryName(code))} · ${esc(why)}</option>`;
+  };
+  sel.innerHTML = `<option value="all">${esc(t("allCountries"))}</option>` + COUNTRY_CODES.map(opt).join("");
+  if (state.country !== "all" && !(have.includes(state.country) && countryAirports(state.country).length)) state.country = "all";
+  sel.value = state.country;
+  sel.disabled = false;
+}
+
+function updateSubtitle() {
+  const n = activeAirports().length;
+  $("subtitle").textContent = `${n} ${plural(n, I18N[LANG].airportForms)} · ${t("polishTime")}`;
+}
+
+function fitToAirports() {
+  const pts = activeAirports().map((icao) => [AIRPORTS[icao].lat, AIRPORTS[icao].lon]);
+  if (pts.length) map.fitBounds(pts, { padding: [40, 40], maxZoom: 8 });
+}
+
+function setCountry(code, fit = true) {
+  state.country = code;
+  state.rankAll = false;
+  if (state.selected && !isActive(state.selected)) state.selected = null;
+  const url = new URL(location.href);
+  if (code === "all") url.searchParams.delete("country"); else url.searchParams.set("country", code);
+  history.replaceState(null, "", url);
+  $("countrySelect").value = code;
+  updateSubtitle();
+  if (fit) fitToAirports();
+  render();
+}
+
 function setLang(l) {
   LANG = l;
   try { localStorage.setItem("lang", l); } catch (e) {}
   const url = new URL(location.href); url.searchParams.set("lang", l); history.replaceState(null, "", url);
   applyStatic();
-  if (state.days.length) fillDaySelect();
+  if (state.days.length) { fillDaySelect(); fillCountrySelect(); updateSubtitle(); }
   if (!state.playing) $("playTxt").textContent = t("play"); else $("playTxt").textContent = t("stop");
   updateNotes();
   if (legend) { legend.remove(); legend.addTo(map); }
@@ -620,11 +726,11 @@ async function loadDay(day) {
 
 // ---------- obliczenia ----------
 const dirOk = (f) => state.dir === "all" || f.type === state.dir;
-const visibleFlights = () => state.flights.filter((f) => dirOk(f) && inWindow(f.hour));
+const visibleFlights = () => state.flights.filter((f) => dirOk(f) && inWindow(f.hour) && isActive(f.ap));
 
 function countsByAirport(list) {
   const c = {};
-  for (const icao of Object.keys(AIRPORTS)) c[icao] = { departure: 0, arrival: 0, total: 0 };
+  for (const icao of activeAirports()) c[icao] = { departure: 0, arrival: 0, total: 0 };
   for (const f of list) { c[f.ap][f.type]++; c[f.ap].total++; }
   return c;
 }
@@ -737,8 +843,8 @@ function renderMap(list, counts) {
   // pierścień = podział na odloty (pomarańczowy) i przyloty (niebieski).
   circleLayer.clearLayers();
   const far = map.getZoom() < 5.5; // przy oddaleniu mniejsze plakietki, żeby się nie nakładały
-  for (const [icao, a] of Object.entries(AIRPORTS)) {
-    const c = counts[icao];
+  for (const [icao, c] of Object.entries(counts)) {
+    const a = AIRPORTS[icao];
     const sel = icao === state.selected;
     let size = c.total ? 30 + Math.sqrt(c.total) * 2.1 : 24;
     if (far) size = c.total ? Math.max(18, size * 0.6) : 12;
@@ -805,7 +911,7 @@ function renderKpis(list) {
 
 function renderHistogram() {
   const svg = $("hist");
-  const src = state.flights.filter((f) => !state.selected || f.ap === state.selected);
+  const src = state.flights.filter((f) => (state.selected ? f.ap === state.selected : isActive(f.ap)));
   const dep = new Array(24).fill(0), arr = new Array(24).fill(0);
   for (const f of src) (f.type === "arrival" ? arr : dep)[f.hour]++;
   const showDep = state.dir !== "arrival", showArr = state.dir !== "departure";
@@ -844,15 +950,22 @@ function renderHistogram() {
   $("histTitle").textContent = state.selected ? `${t("perHour")} · ${AIRPORTS[state.selected].iata}` : t("perHour");
 }
 
+const RANK_TOP = 15;
 function renderRanking(counts) {
-  const items = Object.entries(counts).sort((a, b) => b[1].total - a[1].total);
-  const max = Math.max(1, ...items.map(([, c]) => c.total));
+  const all = Object.entries(counts).sort((a, b) => b[1].total - a[1].total);
+  const max = Math.max(1, ...all.map(([, c]) => c.total));
+  // Długa lista (kilka krajów): domyślnie tylko największe lotniska i to wybrane.
+  const items = state.rankAll ? all : all.filter(([icao], i) => i < RANK_TOP || icao === state.selected);
+  const more = $("rankMore");
+  more.hidden = all.length <= RANK_TOP;
+  more.textContent = state.rankAll ? t("showTop") : t("showAll", { n: all.length });
+  const withCountry = state.country === "all" && dayCountries().length > 1;
   $("rank").innerHTML = items.map(([icao, c]) => {
     const a = AIRPORTS[icao];
     const d = (c.departure / max) * 100, r = (c.arrival / max) * 100;
-    return `<li><button data-icao="${icao}" aria-pressed="${icao === state.selected}" title="${esc(a.name)}: odloty ${c.departure}, przyloty ${c.arrival}">
+    return `<li><button data-icao="${icao}" aria-pressed="${icao === state.selected}" title="${esc(a.name)}: ${t("departures")} ${c.departure}, ${t("arrivals")} ${c.arrival}">
       <span class="code">${a.iata}</span>
-      <span><span class="name">${esc(a.name)}</span>
+      <span><span class="name">${esc(a.name)}${withCountry ? ` <span class="cc">${esc(a.country)}</span>` : ""}</span>
         <span class="track">${d ? `<i class="dep" style="width:${d}%"></i>` : ""}${r ? `<i class="arr" style="width:${r}%"></i>` : ""}</span></span>
       <span class="num">${fmt(c.total)}</span></button></li>`;
   }).join("");
@@ -921,6 +1034,12 @@ async function chooseDay(date) {
     const data = await loadDay(day);
     state.day = day; state.flights = data.flights; state.outside = data.outside;
     setScale(data.flights);
+    const before = state.country;
+    fillCountrySelect(); // kraje dostępne w tym dniu
+    // Wybrany kraj nie ma danych z tego dnia: wracamy do widoku wszystkich krajów.
+    if (state.country !== before) setCountry(state.country);
+    if (state.selected && !isActive(state.selected)) state.selected = null;
+    updateSubtitle();
     if (legend) { legend.remove(); legend.addTo(map); } // progi na legendzie zależą od dnia
     const url = new URL(location.href); url.searchParams.set("day", date); history.replaceState(null, "", url);
     $("srcName").textContent = day.source === "opensky" ? "OpenSky Network" : day.source === "aerodatabox" ? "AeroDataBox" : day.source;
@@ -935,6 +1054,8 @@ function updateNotes() {
   const day = state.day, notes = [];
   if (!day) return;
   if (state.outside) notes.push(t("noteOutside", { n: state.outside }));
+  const have = dayCountries();
+  if (have.length < COUNTRY_CODES.filter((c) => countryAirports(c).length).length) notes.push(t("noteOnlyCountries", { list: have.map(countryName).join(", ") }));
   if (day.missing?.length) notes.push(t("noteMissing", { list: day.missing.join(", ") }));
   if (day.note && LANG === "pl") notes.push(day.note);
   $("note").textContent = notes.join(" ");
@@ -970,7 +1091,7 @@ async function init() {
   $("playTxt").textContent = t("play");
   map = L.map("map", { zoomSnap: 0.5, zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
-  map.fitBounds(Object.values(AIRPORTS).map((a) => [a.lat, a.lon]), { padding: [40, 40] });
+  map.fitBounds([[49, 14.1], [54.9, 24.2]]); // Polska, zanim wczytają się lotniska
   applyTiles();
 
   heatLayer = L.heatLayer ? L.heatLayer([], { radius: 55, blur: 38, minOpacity: 0.05, maxZoom: 0 /* pełna intensywność przy każdym przybliżeniu */, gradient: heatGradient() }) : L.layerGroup();
@@ -1003,6 +1124,8 @@ async function init() {
     if ($("layerRoutes").checked && map.getZoom() > 4.5) map.flyTo([50, 14], 4, { duration: 0.8 });
   });
   $("dClose").addEventListener("click", clearSelection);
+  $("countrySelect").addEventListener("change", (e) => setCountry(e.target.value));
+  $("rankMore").addEventListener("click", () => { state.rankAll = !state.rankAll; render(); });
   // Rozmiar plakietek i plam heatmapy zależy od przybliżenia (progi 5, 5.5 i 6).
   let lastZoomBand = null;
   const zoomBand = () => { const z = map.getZoom(); return z < 5 ? 0 : z < 5.5 ? 1 : z < 6 ? 2 : 3; };
@@ -1013,11 +1136,15 @@ async function init() {
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { applyTiles(); render(); });
 
   try {
-    const [index, coords] = await Promise.all([
+    const [index, coords, tracked] = await Promise.all([
       fetchJSON(`${DATA_DIR}index.json`),
       fetchJSON(`${DATA_DIR}airports_coords.json`).catch(() => ({})),
+      fetchJSON(`${DATA_DIR}airports_tracked.json`).catch(() => null),
     ]);
     state.coords = coords;
+    buildAirports(tracked, coords);
+    const wantedCountry = (new URL(location.href).searchParams.get("country") || "").toUpperCase();
+    if (COUNTRY_CODES.includes(wantedCountry)) state.country = wantedCountry;
     state.days = index.days || [];
     if (!state.days.length) throw new Error(t("errNoDays"));
     const sel = $("daySelect");
@@ -1027,6 +1154,7 @@ async function init() {
     const first = state.days.some((d) => d.date === wanted) ? wanted : state.days[0].date;
     sel.value = first;
     await chooseDay(first);
+    fitToAirports();
   } catch (e) {
     const hint = location.protocol === "file:" ? " " + t("errFile") : "";
     $("note").innerHTML = `<span class="error">${esc(e.message)}.${hint}</span>`;
