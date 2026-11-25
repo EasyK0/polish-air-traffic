@@ -1,0 +1,69 @@
+{
+  "PL": [
+    "EPGD",
+    "EPKK",
+    "EPKT",
+    "EPLB",
+    "EPLL",
+    "EPMO",
+    "EPPO",
+    "EPRZ",
+    "EPSC",
+    "EPWA",
+    "EPWR",
+    "EPBY",
+    "EPRA",
+    "EPSY",
+    "EPZG"
+  ],
+  "DE": [
+    "EDDB",
+    "EDDC",
+    "EDDE",
+    "EDDF",
+    "EDDG",
+    "EDDH",
+    "EDDK",
+    "EDDL",
+    "EDDM",
+    "EDDN",
+    "EDDP",
+    "EDDS",
+    "EDDV",
+    "EDDW",
+    "EDFH",
+    "EDJA",
+    "EDLP",
+    "EDLV",
+    "EDLW",
+    "EDNY",
+    "EDSB",
+    "EDVK"
+  ],
+  "CZ": [
+    "LKCS",
+    "LKKV",
+    "LKMT",
+    "LKPD",
+    "LKPR",
+    "LKTB"
+  ],
+  "SK": [
+    "LZIB",
+    "LZKZ",
+    "LZTT"
+  ],
+  "UA": [],
+  "BY": [
+    "UMBB",
+    "UMMS"
+  ],
+  "LT": [
+    "EYKA",
+    "EYPA",
+    "EYVI"
+  ],
+  "RU": [
+    "UMKK"
+  ]
+}
